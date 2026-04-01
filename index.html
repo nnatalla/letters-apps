@@ -1,0 +1,3241 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Obsługi Pism Komorniczych</title>
+    <link rel="icon" type="image/png" href="static/logo.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #2a5298 0%, #4a90e2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(74, 144, 226, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header-logo {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin: 0 auto 20px auto;
+            display: block;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .step {
+            display: none;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .step.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: #2a5298;
+            box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.1);
+            outline: none;
+        }
+
+        .file-upload {
+            border: 3px dashed #2a5298;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: #f0f4f8;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .file-upload:hover {
+            background: #e6f2ff;
+            border-color: #4a90e2;
+        }
+
+        .file-upload.dragover {
+            background: #dbeafe;
+            border-color: #3b82f6;
+        }
+
+        .radio-group {
+            display: grid;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 20px 15px;
+            border: 2px solid #cbd5e0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .radio-option:hover {
+            border-color: #2a5298;
+            background: #e6f2ff;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(42, 82, 152, 0.2);
+        }
+
+        .radio-option.selected {
+            border-color: #2a5298;
+            background: linear-gradient(135deg, #2a5298 0%, #4a90e2 100%);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(42, 82, 152, 0.3);
+        }
+
+        .radio-option.selected strong {
+            color: white;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .radio-option.selected p {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .radio-option input[type="radio"] {
+            display: none;
+        }
+
+        .radio-option div {
+            flex: 1;
+            text-align: left;
+        }
+
+        .radio-option strong {
+            font-size: 1.1em;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .radio-option p {
+            margin: 5px 0 0 0;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #2a5298 0%, #4a90e2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(74, 144, 226, 0.3);
+        }
+
+        .btn-secondary {
+            background: #495057;
+        }
+
+        .btn-secondary:hover {
+            background: #343a40;
+            box-shadow: 0 10px 20px rgba(73, 80, 87, 0.3);
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+            margin: 2px;
+        }
+
+        .extracted-data {
+            background: linear-gradient(135deg, #2a5298 0%, #4a90e2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+
+        .extracted-data h3 {
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .data-item {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 15px;
+            border-radius: 8px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .data-item:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .data-item label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .data-item .data-value {
+            font-size: 1.1em;
+            font-weight: 600;
+            word-break: break-word;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 5px 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s ease;
+            pointer-events: auto;
+        }
+
+        .copy-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .bailiff-entry {
+            border: 2px solid #cbd5e0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: #f7fafc;
+            position: relative;
+        }
+
+        .bailiff-entry h4 {
+            margin-bottom: 15px;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .bailiff-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .generated-letters {
+            margin-top: 30px;
+        }
+
+        .letter-preview {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            font-family: 'Times New Roman', serif;
+            line-height: 1.6;
+            display: none;
+        }
+
+        .letter-preview.active {
+            display: block;
+        }
+
+        .letter-header {
+            text-align: right;
+            margin-bottom: 30px;
+        }
+
+        .letter-content {
+            text-align: justify;
+        }
+
+        .letter-navigation {
+            background: #f7fafc;
+            border: 2px solid #4a5568;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .nav-button {
+            background: linear-gradient(135deg, #2a5298 0%, #4a90e2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(74, 144, 226, 0.3);
+        }
+
+        .nav-button:disabled {
+            background: #718096;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .letter-counter {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
+            margin: 10px 0;
+        }
+
+        .multiple-letters-info {
+            background: linear-gradient(135deg, #2a5298 0%, #4a90e2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .multiple-letters-info h3 {
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+
+        .download-section {
+            background: #edf2f7;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .download-section h4 {
+            margin-bottom: 15px;
+            color: #2d3748;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #cbd5e0;
+            border-radius: 3px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #2a5298 0%, #4a90e2 100%);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+        }
+
+        .step-item {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+
+        .step-item::before {
+            content: '';
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #cbd5e0;
+            display: block;
+            margin: 0 auto 10px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .step-item.active::before,
+        .step-item.completed::before {
+            background: linear-gradient(135deg, #2a5298 0%, #4a90e2 100%);
+        }
+
+        .step-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background: #cbd5e0;
+            z-index: 1;
+        }
+
+        .step-item.completed::after {
+            background: linear-gradient(135deg, #2a5298 0%, #4a90e2 100%);
+        }
+
+        .remove-bailiff {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .zbieg-form {
+            background: #e6f3ff;
+            border: 2px solid #a0c4ff;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .zbieg-basic-data {
+            background: #e7f3ff;
+            border: 2px solid #b3d9ff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .zbieg-basic-data h4 {
+            color: #0066cc;
+            margin-bottom: 15px;
+        }
+
+        .readonly-field {
+            background: #f8f9fa !important;
+            color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .bailiff-list-container {
+            background: #fff;
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .bailiff-summary {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+
+            .bailiff-grid,
+            .data-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .bailiff-buttons-group.auto-filled {
+            display: none !important;
+        }
+
+        .auto-filled-notice {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            color: #2e7d32;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="static/logo.png" alt="Logo" class="header-logo">
+            <h1>System Obsługi Pism Komorniczych</h1>
+            <p>Logistics • Cars • Taxi</p>
+        </div>
+
+        <div class="main-content">
+            <div class="step-indicator">
+                <div class="step-item active" data-step="1">
+                    <span>Upload Pisma</span>
+                </div>
+                <div class="step-item" data-step="2">
+                    <span>Rozpoznanie Danych</span>
+                </div>
+                <div class="step-item" data-step="3">
+                    <span>Weryfikacja</span>
+                </div>
+                <div class="step-item" data-step="4">
+                    <span>Generowanie Listów</span>
+                </div>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 25%"></div>
+            </div>
+
+            <div class="step active" id="step-1">
+                <h2>Krok 1: Upload Pisma Komorniczego</h2>
+
+                <div class="form-group">
+                    <label for="company">Wybierz spółkę:</label>
+                    <select id="company" required>
+                        <option value="">-- Wybierz spółkę --</option>
+                        <option value="Logistics">Logistics</option>
+                        <option value="Cars">Cars</option>
+                        <option value="Taxi">Taxi</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Prześlij pismo (PDF lub JPG):</label>
+                    <div class="file-upload" id="fileUpload">
+                        <input type="file" id="fileInput" accept=".PDF,.jpg,.jpeg,.png" style="display: none;">
+                        <div class="upload-text">
+                            <h3>📄 Przeciągnij plik tutaj lub kliknij aby wybrać</h3>
+                            <p>Obsługiwane formaty: PDF, JPG, PNG (max 10MB)</p>
+                        </div>
+                    </div>
+                    <div id="fileName" style="margin-top: 10px; font-weight: 600; color: #28a745;"></div>
+                </div>
+
+                <button class="btn" onclick="processFile()">Przetwórz Pismo</button>
+            </div>
+
+            <div class="step" id="step-2">
+                <h2>Krok 2: Rozpoznane Dane</h2>
+                                <!-- Kontener dla trybu komorniczego (istniejący kod) -->
+                <div id="step2-komornicze">
+                    <!-- TUTAJ WKLEJ całą istniejącą zawartość kroku 2 (extracted-data div + bailiff-grid div) -->
+                </div>
+
+                <!-- Kontener dla trybu uniwersalnego (nowy) -->
+                <div id="step2-universal" style="display:none;">
+                    <div id="universal-classification"></div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="font-weight:600; color:#333;">Scenariusz odpowiedzi (opcjonalne):</label>
+                        <select id="universal-scenario"
+                                style="width:100%; padding:12px; border:2px solid #e1e5e9;
+                                    border-radius:10px; font-size:16px; margin-top:8px;">
+                            <option value="">-- Automatycznie dobierz ton --</option>
+                            <option value="odmowa">Odmowa / brak możliwości spełnienia</option>
+                            <option value="potwierdzenie">Potwierdzenie / akceptacja</option>
+                            <option value="wyjaśnienie">Wyjaśnienie sytuacji</option>
+                            <option value="prośba o więcej czasu">Prośba o przedłużenie terminu</option>
+                            <option value="przekazanie do właściwej osoby">Przekazanie do właściwego działu</option>
+                        </select>
+                    </div>
+
+                    <h3 style="margin-bottom:15px;">🔍 Rozpoznane pola (sprawdź i popraw):</h3>
+                    <div id="universal-fields-grid" class="bailiff-grid"></div>
+                </div>
+                <div class="extracted-data" id="extractedData">
+                    <h3>🔍 Automatycznie rozpoznane informacje (kliknij aby skopiować):</h3>
+                    <div class="data-grid">
+                        <div class="data-item" onclick="copyToClipboard('bailiffName')">
+                            <button class="copy-btn"
+                                onclick="event.stopPropagation(); copyToClipboard('bailiffName')">📋</button>
+                            <label>Komornik:</label>
+                            <div class="data-value" id="bailiffName"></div>
+                        </div>
+                        <div class="data-item" onclick="copyToClipboard('bailiffAddress')">
+                            <button class="copy-btn"
+                                onclick="event.stopPropagation(); copyToClipboard('bailiffAddress')">📋</button>
+                            <label>Adres:</label>
+                            <div class="data-value" id="bailiffAddress"></div>
+                        </div>
+                        <div class="data-item" onclick="copyToClipboard('bailiffCity')">
+                            <button class="copy-btn"
+                                onclick="event.stopPropagation(); copyToClipboard('bailiffCity')">📋</button>
+                            <label>Kod i miasto:</label>
+                            <div class="data-value" id="bailiffCity"></div>
+                        </div>
+                        <div class="data-item" onclick="copyToClipboard('debtorName')">
+                            <button class="copy-btn"
+                                onclick="event.stopPropagation(); copyToClipboard('debtorName')">📋</button>
+                            <label>Dłużnik:</label>
+                            <div class="data-value" id="debtorName"></div>
+                        </div>
+                        <div class="data-item" onclick="copyToClipboard('debtorPesel')">
+                            <button class="copy-btn"
+                                onclick="event.stopPropagation(); copyToClipboard('debtorPesel')">📋</button>
+                            <label>PESEL:</label>
+                            <div class="data-value" id="debtorPesel"></div>
+                        </div>
+                        <div class="data-item" onclick="copyToClipboard('caseNumber')">
+                            <button class="copy-btn"
+                                onclick="event.stopPropagation(); copyToClipboard('caseNumber')">📋</button>
+                            <label>Sygnatura:</label>
+                            <div class="data-value" id="caseNumber"></div>
+                        </div>
+                        <div class="data-item" onclick="copyToClipboard('bankAccount')">
+                            <button class="copy-btn"
+                                onclick="event.stopPropagation(); copyToClipboard('bankAccount')">📋</button>
+                            <label>Nr rachunku:</label>
+                            <div class="data-value" id="bankAccount"></div>
+                        </div>
+                        <div class="data-item" onclick="copyToClipboard('bailiffContact')">
+                            <button class="copy-btn"
+                                onclick="event.stopPropagation(); copyToClipboard('bailiffContact')">📋</button>
+                            <label>Kontakt komornika:</label>
+                            <div class="data-value" id="bailiffContact"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <h3>Sprawdź i popraw dane jeśli potrzeba:</h3>
+
+                    <div class="bailiff-grid">
+                        <div class="form-group">
+                            <label for="editBailiffName">Komornik - Imię i Nazwisko:</label>
+                            <input type="text" id="editBailiffName">
+                        </div>
+                        <div class="form-group">
+                            <label for="editBailiffAddress">Adres - Ulica:</label>
+                            <input type="text" id="editBailiffAddress">
+                        </div>
+                        <div class="form-group">
+                            <label for="editBailiffCity">Kod i miasto:</label>
+                            <input type="text" id="editBailiffCity">
+                        </div>
+                        <div class="form-group">
+                            <label for="editBailiffContact">Telefon/Email:</label>
+                            <input type="text" id="editBailiffContact">
+                        </div>
+                        <div class="form-group">
+                            <label for="editDebtorName">Dłużnik - Imię i Nazwisko:</label>
+                            <input type="text" id="editDebtorName">
+                        </div>
+                        <div class="form-group">
+                            <label for="editDebtorPesel">PESEL dłużnika:</label>
+                            <input type="text" id="editDebtorPesel">
+                        </div>
+                        <div class="form-group">
+                            <label for="editCaseNumber">Sygnatura sprawy:</label>
+                            <input type="text" id="editCaseNumber">
+                        </div>
+                        <div class="form-group">
+                            <label for="editBankAccount">Numer rachunku bankowego:</label>
+                            <input type="text" id="editBankAccount">
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-secondary btn" onclick="goToStep(1)">Wróć</button>
+                <button class="btn" onclick="goToStep(3)">Przejdź do weryfikacji</button>
+            </div>
+
+            <div class="step" id="step-3">
+                <h2>Krok 3: Weryfikacja Statusu Osoby</h2>
+
+                <div class="form-group">
+                    <label>Wybierz odpowiednią opcję:</label>
+                    <div class="radio-group">
+                        <div class="radio-option" onclick="selectOption(1)">
+                            <input type="radio" name="verification" value="1" id="option1">
+                            <div>
+                                <strong>Osoba NIE PRACUJE w spółce</strong>
+                                <p style="margin-top: 5px; opacity: 0.8;">Osoba zakończyła współpracę z firmą</p>
+                            </div>
+                        </div>
+
+                        <div class="radio-option" onclick="selectOption(2)">
+                            <input type="radio" name="verification" value="2" id="option2">
+                            <div>
+                                <strong>Osoba PRACUJE - błędne pismo (wynagrodzenie zamiast zajęcia)</strong>
+                                <p style="margin-top: 5px; opacity: 0.8;">Osoba pracuje, ale pismo dotyczy wynagrodzenia
+                                    za pracę</p>
+                            </div>
+                        </div>
+
+                        <div class="radio-option" onclick="selectOption(3)">
+                            <input type="radio" name="verification" value="3" id="option3">
+                            <div>
+                                <strong>Osoba PRACUJE - zajęcie wierzytelności</strong>
+                                <p style="margin-top: 5px; opacity: 0.8;">Osoba pracuje i pismo jest prawidłowe</p>
+                            </div>
+                        </div>
+
+                        <div class="radio-option" onclick="selectOption(4)">
+                            <input type="radio" name="verification" value="4" id="option4">
+                            <div>
+                                <strong>ZBIEG KOMORNICZY</strong>
+                                <p style="margin-top: 5px; opacity: 0.8;">Kolejny komornik wobec tej samej osoby</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="additionalFields1" style="display: none;">
+                    <div class="form-group">
+                        <label for="endDate">Data zakończenia współpracy:</label>
+                        <input type="date" id="endDate">
+                    </div>
+                </div>
+
+                <div id="additionalFields3" style="display: none;">
+                    <div class="form-group">
+                        <label>Rodzaj umowy:</label>
+                        <div style="margin-top: 10px;">
+                            <label style="display: inline-flex; align-items: center; margin-right: 20px;">
+                                <input type="radio" name="contractType" id="contractType1" value="zlecenie"
+                                    style="margin-right: 8px;">
+                                Umowa zlecenie
+                            </label>
+                            <label style="display: inline-flex; align-items: center;">
+                                <input type="radio" name="contractType" id="contractType2" value="najem"
+                                    style="margin-right: 8px;">
+                                Umowa najmu pojazdu
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="additionalFields4" style="display: none;">
+                    <div class="zbieg-form">
+                        <h3>📋 Formularz Listu 4 - Zbieg Komorniczy</h3>
+
+                        <div class="zbieg-basic-data">
+                            <h4>Dane podstawowe (automatycznie uzupełnione z pisma):</h4>
+                            <div class="bailiff-grid">
+                                <div class="form-group">
+                                    <label>Spółka:</label>
+                                    <input type="text" id="zbiegCompany" class="readonly-field">
+                                </div>
+                                <div class="form-group">
+                                    <label>Data wpływu pisma:</label>
+                                    <input type="date" id="zbiegDate" value="">
+                                </div>
+                                <div class="form-group">
+                                    <label>Dłużnik - Imię i Nazwisko:</label>
+                                    <input type="text" id="zbiegDebtorName" class="readonly-field">
+                                </div>
+                                <div class="form-group">
+                                    <label>PESEL:</label>
+                                    <input type="text" id="zbiegDebtorPesel" class="readonly-field">
+                                </div>
+                            </div>
+
+                            <h5 style="margin: 15px 0 10px 0;">Komornik A (z bieżącego pisma):</h5>
+                            <div class="bailiff-grid">
+                                <div class="form-group">
+                                    <label>Imię i Nazwisko:</label>
+                                    <input type="text" id="zbiegBailiffA_Name" class="readonly-field" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>Numer sprawy:</label>
+                                    <input type="text" id="zbiegBailiffA_Case" class="readonly-field" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>Adres:</label>
+                                    <input type="text" id="zbiegBailiffA_Address" class="readonly-field" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>Kod i miasto:</label>
+                                    <input type="text" id="zbiegBailiffA_City" class="readonly-field" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bailiff-list-container">
+                            <h4>Dodatkowe pole: Lista innych komorników (ręczne wpisywanie):</h4>
+                            <div id="additionalBailiffs"></div>
+                            <button type="button" class="btn-secondary btn" onclick="addBailiff()">+ Dodaj
+                                komornika</button>
+
+                            <div id="bailiffSummary" style="margin-top: 20px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 30px;">
+                    <button class="btn-secondary btn" onclick="goToStep(2)">Wróć</button>
+                    <button id="generateBtn" class="btn" onclick="generateLetters()">Generuj Listy</button>
+                </div>
+            </div>
+
+            <div class="step" id="step-4">
+                <h2>Krok 4: Wygenerowane Listy</h2>
+
+                <div class="generated-letters" id="generatedLetters">
+                </div>
+
+                <div style="margin-top: 30px;">
+                    <button class="btn-secondary btn" onclick="goToStep(3)">Wróć do weryfikacji</button>
+                    <button class="btn" onclick="downloadAllLetters('doc', this)">📥 Pobierz Wszystkie DOC</button>
+                    <button class="btn" onclick="downloadAllLetters('pdf', this)">📥 Pobierz Wszystkie PDF</button>
+                    <button class="btn" onclick="resetSystem()">🔄 Nowa Sprawa</button>
+                </div>
+
+                <!-- Instrukcja dla użytkownika -->
+                <div
+                    style="background: #f8f9fa; border: 2px solid #dee2e6; border-radius: 12px; padding: 20px; margin-top: 20px;">
+                    <h4 style="color: #495057; margin-bottom: 15px;">ℹ️ Instrukcja obsługi:</h4>
+                    <ul style="color: #6c757d; line-height: 1.6;">
+                        <li><strong>Zbieg komorniczy:</strong> Gdy wybierzesz opcję "ZBIEG KOMORNICZY", system
+                            wygeneruje osobny list dla każdego komornika</li>
+                        <li><strong>Nawigacja:</strong> Używaj przycisków "Poprzedni/Następny" lub klawiszy strzałek ← →
+                            do przeglądania listów</li>
+                        <li><strong>Pobieranie:</strong> Możesz pobrać listy w formacie DOC lub PDF - pojedynczo lub
+                            wszystkie na raz</li>
+                        <li><strong>Formaty plików:</strong>
+                            <ul>
+                                <li>📄 DOC - plik Microsoft Word, można edytować w programach tekstowych</li>
+                                <li>📃 PDF - plik w formacie PDF gotowy do wydruku</li>
+                            </ul>
+                        </li>
+                        <li><strong>Kopiowanie:</strong> Kliknij "📋 Kopiuj treść" aby skopiować tekst listu do schowka
+                        </li>
+                        <li><strong>Edycja daty:</strong> Użyj "📅 Zmień datę" aby dostosować datę w liście</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Predefiniowana lista komorników - będzie ładowana z bazy danych
+        let predefinedBailiffs = [];
+
+        // Ładowanie komorników z bazy danych
+        async function loadBailiffsFromDatabase() {
+            try {
+                const response = await fetch('/api/bailiffs');
+                const result = await response.json();
+
+                if (response.ok) {
+                    predefinedBailiffs = result.bailiffs.map(bailiff => ({
+                        id: bailiff.id,
+                        imieNazwisko: bailiff.imie_nazwisko,
+                        adres: bailiff.adres,
+                        miasto: bailiff.miasto,
+                        kodPocztowy: bailiff.kod_pocztowy,
+                        telefon: bailiff.telefon,
+                        email: bailiff.email,
+                        sadRejonowy: bailiff.sad_rejonowy
+                    }));
+                    console.log(`📋 Załadowano ${predefinedBailiffs.length} komorników z bazy danych`);
+                    console.log('Aktualna lista komorników:', predefinedBailiffs.map(b => `${b.id}: ${b.imieNazwisko}`));
+                } else {
+                    console.error('Błąd ładowania komorników:', result.error);
+                    // Fallback do pustej listy
+                    predefinedBailiffs = [];
+                }
+            } catch (error) {
+                console.error('Błąd połączenia z bazą komorników:', error);
+                predefinedBailiffs = [];
+            }
+        }
+
+        let currentStep = 1;
+        let selectedOption = null;
+        let fileData = null;
+        let additionalBailiffsCount = 0;
+        let bailiffsList = [];
+        let currentLetterIndex = 0;
+        let allGeneratedLetters = [];
+
+        // File upload functionality
+        const fileUpload = document.getElementById('fileUpload');
+        const fileInput = document.getElementById('fileInput');
+
+        fileUpload.addEventListener('click', () => fileInput.click());
+        fileUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUpload.classList.add('dragover');
+        });
+        fileUpload.addEventListener('dragleave', () => {
+            fileUpload.classList.remove('dragover');
+        });
+        fileUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUpload.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            fileData = file;
+            document.getElementById('fileName').textContent = `✅ Wybrano plik: ${file.name}`;
+        }
+
+        async function processFile() {
+            const company = document.getElementById('company').value;
+            if (!company) {
+                alert('Wybierz spółkę!');
+                return;
+            }
+
+            if (!fileData) {
+                alert('Wybierz plik!');
+                return;
+            }
+
+            // Pokaż postęp i zablokuj przycisk
+            document.querySelector('.btn').textContent = 'Przetwarzam...';
+            document.querySelector('.btn').disabled = true;
+
+            const formData = new FormData();
+            formData.append('file', fileData);
+
+            try {
+                const response = await fetch('/process-file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    populateOCRResults(
+                        result.dane,
+                        result.mode,
+                        result.classification,
+                        result.fields,
+                        result.summary
+                    );
+                    goToStep(2);
+
+                } else {
+                    alert('Błąd przetwarzania pliku: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Błąd połączenia z serwerem:', error);
+                alert('Nie udało się połączyć z serwerem.');
+            } finally {
+                document.querySelector('.btn').textContent = 'Przetwórz Pismo';
+                document.querySelector('.btn').disabled = false;
+            }
+        }
+
+        function populateOCRResults(data, mode, classification, fields, summary) {
+    // TRYB KOMORNICZY - stara logika bez zmian
+        if (mode === 'komornicze') {
+            document.getElementById('bailiffName').textContent = data.komornik.imieNazwisko || '';
+            document.getElementById('bailiffAddress').textContent = data.komornik.adres || '';
+            document.getElementById('bailiffCity').textContent = data.komornik.miasto || '';
+            document.getElementById('bailiffContact').textContent =
+                `${data.komornik.telefon || ''} ${data.komornik.email || ''}`.trim();
+            document.getElementById('debtorName').textContent = data.dluznik.imieNazwisko || '';
+            document.getElementById('debtorPesel').textContent = data.dluznik.pesel || '';
+            document.getElementById('caseNumber').textContent = data.sprawa.sygnaturaSprawy || '';
+            document.getElementById('bankAccount').textContent = data.sprawa.numerRachunku || '';
+
+            document.getElementById('editBailiffName').value = data.komornik.imieNazwisko || '';
+            document.getElementById('editBailiffAddress').value = data.komornik.adres || '';
+            document.getElementById('editBailiffCity').value = data.komornik.miasto || '';
+            document.getElementById('editBailiffContact').value =
+                `${data.komornik.telefon || ''} ${data.komornik.email || ''}`.trim();
+            document.getElementById('editDebtorName').value = data.dluznik.imieNazwisko || '';
+            document.getElementById('editDebtorPesel').value = data.dluznik.pesel || '';
+            document.getElementById('editCaseNumber').value = data.sprawa.sygnaturaSprawy || '';
+            document.getElementById('editBankAccount').value = data.sprawa.numerRachunku || '';
+
+            const pesel = data.dluznik.pesel;
+            if (pesel && pesel.length >= 10) {
+                searchEmployeeInDatabase(pesel);
+            }
+
+            // Pokaż standardowy krok 2
+            document.getElementById('step2-komornicze').style.display = 'block';
+            document.getElementById('step2-universal').style.display = 'none';
+            return;
+        }
+
+        // TRYB UNIWERSALNY - dynamiczne pola
+        document.getElementById('step2-komornicze').style.display = 'none';
+        document.getElementById('step2-universal').style.display = 'block';
+
+        // Pokaż badge z typem pisma
+        const classDiv = document.getElementById('universal-classification');
+        const confidence = Math.round((classification.confidence || 0) * 100);
+        classDiv.innerHTML = `
+            <div style="background: linear-gradient(135deg, #1e3c72, #2a5298); color: white;
+                        padding: 15px 20px; border-radius: 10px; margin-bottom: 20px;">
+                <strong>📄 Typ pisma:</strong> ${classification.subtype || 'nieznany'}
+                &nbsp;&nbsp;|&nbsp;&nbsp;
+                <strong>Kategoria:</strong> ${classification.category || ''}
+                &nbsp;&nbsp;|&nbsp;&nbsp;
+                <strong>Pewność:</strong> ${confidence}%
+                ${summary ? `<br><small style="opacity:0.85; margin-top:8px; display:block;">💬 ${summary}</small>` : ''}
+            </div>`;
+
+        // Zapisz dane klasyfikacji globalnie (potrzebne przy generowaniu)
+        window.currentClassification = classification;
+        window.currentFields = fields;
+
+        // Renderuj pola dynamicznie
+        const fieldsContainer = document.getElementById('universal-fields-grid');
+        fieldsContainer.innerHTML = '';
+
+        (fields || []).forEach(field => {
+            const div = document.createElement('div');
+            div.className = 'form-group';
+            div.innerHTML = `
+                <label for="ufield_${field.id}">
+                    ${field.label}
+                    ${field.required ? '<span style="color:#e53e3e">*</span>' : ''}
+                    <small style="color:#888; font-weight:normal;">(${field.type})</small>
+                </label>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input type="text" id="ufield_${field.id}"
+                        value="${field.value || ''}"
+                        placeholder="${field.value ? '' : 'Nie rozpoznano - uzupełnij ręcznie'}"
+                        style="${!field.value ? 'border-color:#e2a000;' : ''}">
+                    <button type="button" onclick="copyFieldValue('ufield_${field.id}')"
+                            style="background:#edf2f7; border:1px solid #cbd5e0; border-radius:8px;
+                                padding:10px; cursor:pointer; white-space:nowrap;">📋</button>
+                </div>`;
+            fieldsContainer.appendChild(div);
+        });
+    }
+
+function copyFieldValue(inputId) {
+    const val = document.getElementById(inputId).value;
+    if (val) navigator.clipboard.writeText(val).catch(() => {});
+}
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const button = element.parentNode.querySelector('.copy-btn');
+                const originalText = button.textContent;
+                button.textContent = '✅';
+                button.style.background = 'rgba(40, 167, 69, 0.8)';
+
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = 'rgba(255,255,255,0.2)';
+                }, 2000);
+            }).catch(err => {
+                console.error('Błąd kopiowania: ', err);
+                alert('Nie udało się skopiować tekstu');
+            });
+        }
+
+        function goToStep(step) {
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.step-item').forEach(s => s.classList.remove('active', 'completed'));
+
+            document.getElementById(`step-${step}`).classList.add('active');
+            currentStep = step;
+
+            for (let i = 1; i <= 4; i++) {
+                const stepItem = document.querySelector(`[data-step="${i}"]`);
+                if (i < step) {
+                    stepItem.classList.add('completed');
+                } else if (i === step) {
+                    stepItem.classList.add('active');
+                }
+            }
+
+            const progress = (step / 4) * 100;
+            document.querySelector('.progress-fill').style.width = progress + '%';
+        }
+
+        function selectOption(option) {
+            selectedOption = option;
+
+            document.querySelectorAll('.radio-option').forEach(opt => opt.classList.remove('selected'));
+            document.querySelectorAll('input[name="verification"]').forEach(input => input.checked = false);
+
+            document.getElementById(`option${option}`).checked = true;
+            document.querySelector(`[onclick="selectOption(${option})"]`).classList.add('selected');
+
+            for (let i = 1; i <= 4; i++) {
+                const fields = document.getElementById(`additionalFields${i}`);
+                if (fields) {
+                    fields.style.display = (i === option) ? 'block' : 'none';
+                }
+            }
+
+            if (option === 4) {
+                populateZbiegData();
+            }
+        }
+
+        function populateZbiegData() {
+            const company = document.getElementById('company').value;
+            const today = new Date().toISOString().split('T')[0];
+
+            document.getElementById('zbiegCompany').value = company;
+            document.getElementById('zbiegDate').value = today;
+            document.getElementById('zbiegDebtorName').value = document.getElementById('editDebtorName').value;
+            document.getElementById('zbiegDebtorPesel').value = document.getElementById('editDebtorPesel').value;
+            document.getElementById('zbiegBailiffA_Name').value = document.getElementById('editBailiffName').value;
+            document.getElementById('zbiegBailiffA_Case').value = document.getElementById('editCaseNumber').value;
+            document.getElementById('zbiegBailiffA_Address').value = document.getElementById('editBailiffAddress').value;
+            document.getElementById('zbiegBailiffA_City').value = document.getElementById('editBailiffCity').value;
+        }
+
+        function addBailiff() {
+            additionalBailiffsCount++;
+            const container = document.getElementById('additionalBailiffs');
+
+            const bailiffDiv = document.createElement('div');
+            bailiffDiv.className = 'bailiff-entry';
+            bailiffDiv.innerHTML = `
+                <h4>
+                    Komornik ${String.fromCharCode(65 + additionalBailiffsCount)}
+                    <button type="button" class="remove-bailiff" onclick="removeBailiff(this)">Usuń</button>
+                </h4>
+                
+                <div class="form-group bailiff-buttons-group" id="bailiffButtons${additionalBailiffsCount}" style="margin-bottom: 15px;">
+                    <div style="display: flex; gap: 10px;">
+                        <button type="button" class="btn-secondary btn btn-small" onclick="openBailiffSelector(${additionalBailiffsCount})" style="flex: 1;">
+                            📋 Wybierz komornika z listy
+                        </button>
+                        <button type="button" class="btn btn-small" onclick="openAddBailiffForm()" style="flex: 1; background: #28a745; color: white;">
+                            ➕ Dodaj nowego komornika
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="bailiff-grid">
+                    <div class="form-group">
+                        <label>Imię i Nazwisko:</label>
+                        <input type="text" name="additionalBailiffName${additionalBailiffsCount}" required onchange="updateBailiffSummary()">
+                    </div>
+                    <div class="form-group">
+                        <label>Numer sprawy:</label>
+                        <input type="text" name="additionalBailiffCase${additionalBailiffsCount}" required onchange="updateBailiffSummary()">
+                    </div>
+                    <div class="form-group">
+                        <label>Ulica:</label>
+                        <input type="text" name="additionalBailiffAddress${additionalBailiffsCount}" required onchange="updateBailiffSummary()">
+                    </div>
+                    <div class="form-group">
+                        <label>Kod pocztowy i miasto:</label>
+                        <input type="text" name="additionalBailiffCity${additionalBailiffsCount}" required onchange="updateBailiffSummary()">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Data wpłynięcia pisma tego komornika:</label>
+                    <input type="date" name="additionalBailiffDate${additionalBailiffsCount}" required onchange="updateBailiffSummary()">
+                </div>
+            `;
+
+            container.appendChild(bailiffDiv);
+            updateBailiffSummary();
+        }
+
+        function removeBailiff(button) {
+            button.parentNode.parentNode.remove();
+            updateBailiffSummary();
+        }
+
+        // Wrapper function dla onclick w HTML
+        function openBailiffSelector(bailiffIndex) {
+            showBailiffSelector(bailiffIndex);
+        }
+
+        async function showBailiffSelector(bailiffIndex) {
+            // Zapisz globalnie indeks formularza dla którego otwieramy modal
+            window.currentBailiffSelectorIndex = bailiffIndex;
+
+            // Najpierw odśwież listę komorników z bazy danych
+            await loadBailiffsFromDatabase();
+
+            // Tworzymy modal z listą komorników
+            const modal = document.createElement('div');
+            modal.className = 'bailiff-selector-modal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+            `;
+
+            const modalContent = document.createElement('div');
+            modalContent.style.cssText = `
+                background: white;
+                padding: 30px;
+                border-radius: 15px;
+                max-width: 600px;
+                width: 90%;
+                height: 70vh;
+                display: flex;
+                flex-direction: column;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            `;
+
+            modalContent.innerHTML = `
+                <h3 style="margin-bottom: 20px; color: #2a5298; flex-shrink: 0;">Wybierz komornika z listy</h3>
+                <div class="bailiff-list" style="
+                    flex: 1;
+                    overflow-y: auto;
+                    padding-right: 10px;
+                    margin-bottom: 20px;
+                ">
+                    ${predefinedBailiffs.map((bailiff, index) => `
+                        <div class="bailiff-option" style="
+                            padding: 15px;
+                            border: 2px solid #cbd5e0;
+                            border-radius: 10px;
+                            margin-bottom: 10px;
+                            transition: all 0.3s ease;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                        " onmouseover="this.style.borderColor='#2a5298'; this.style.background='#e6f2ff';" 
+                           onmouseout="this.style.borderColor='#cbd5e0'; this.style.background='white';">
+                            <div onclick="selectBailiff(${index}, ${bailiffIndex})" style="flex: 1; cursor: pointer;">
+                                <strong>${bailiff.imieNazwisko}</strong><br>
+                                <small style="color: #666;">${bailiff.adres}, ${bailiff.kodPocztowy} ${bailiff.miasto}</small>
+                            </div>
+                            <div style="display: flex; gap: 5px;">
+                                <button onclick="editBailiff(${bailiff.id}, event)" style="
+                                    background: #28a745;
+                                    color: white;
+                                    border: none;
+                                    padding: 8px 12px;
+                                    border-radius: 6px;
+                                    cursor: pointer;
+                                    font-size: 12px;
+                                " title="Edytuj komornika">✏️ Edytuj</button>
+                                <button onclick="confirmDeleteBailiff(${bailiff.id}, '${bailiff.imieNazwisko}', event)" style="
+                                    background: #dc3545;
+                                    color: white;
+                                    border: none;
+                                    padding: 8px 12px;
+                                    border-radius: 6px;
+                                    cursor: pointer;
+                                    font-size: 12px;
+                                " title="Usuń komornika">🗑️ Usuń</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <button onclick="closeBailiffSelector()" style="
+                    width: 100%;
+                    padding: 12px;
+                    background: #6c757d;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    flex-shrink: 0;
+                ">Wyjdź</button>
+            `;
+
+            modal.appendChild(modalContent);
+            document.body.appendChild(modal);
+
+            // Zamykanie na kliknięcie tła
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeBailiffSelector();
+                }
+            });
+        }
+
+        function selectBailiff(bailiffIndex, formIndex) {
+            const selectedBailiff = predefinedBailiffs[bailiffIndex];
+
+            // Uzupełniamy pola formularza
+            document.querySelector(`input[name="additionalBailiffName${formIndex}"]`).value = selectedBailiff.imieNazwisko;
+            document.querySelector(`input[name="additionalBailiffAddress${formIndex}"]`).value = selectedBailiff.adres;
+            document.querySelector(`input[name="additionalBailiffCity${formIndex}"]`).value = `${selectedBailiff.kodPocztowy} ${selectedBailiff.miasto}`;
+
+            // Ukryj przyciski i pokaż informację o automatycznym uzupełnieniu
+            hideButtonsAndShowAutoFilledNotice(formIndex, selectedBailiff.imieNazwisko);
+
+            closeBailiffSelector();
+            updateBailiffSummary();
+
+            // Pokazujemy komunikat o uzupełnieniu
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #28a745;
+                color: white;
+                padding: 15px 20px;
+                border-radius: 8px;
+                z-index: 1001;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            `;
+            notification.textContent = `Dane komornika ${selectedBailiff.imieNazwisko} zostały uzupełnione!`;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        function closeBailiffSelector() {
+            const modal = document.querySelector('.bailiff-selector-modal');
+            if (modal) {
+                modal.remove();
+            }
+            // Wyczyść zmienną globalną
+            window.currentBailiffSelectorIndex = null;
+        }
+
+        function confirmDeleteBailiff(bailiffId, bailiffName, event) {
+            // Zatrzymaj propagację eventu, żeby nie wybierać komornika
+            event.stopPropagation();
+
+            // Utwórz modal potwierdzenia
+            const confirmModal = document.createElement('div');
+            confirmModal.className = 'delete-confirm-modal';
+            confirmModal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.6);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 1001;
+            `;
+
+            const confirmContent = document.createElement('div');
+            confirmContent.style.cssText = `
+                background: white;
+                padding: 30px;
+                border-radius: 15px;
+                max-width: 500px;
+                width: 90%;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+                text-align: center;
+            `;
+
+            confirmContent.innerHTML = `
+                <h3 style="color: #dc3545; margin-bottom: 20px;">⚠️ Usunięcie komornika</h3>
+                <p style="margin-bottom: 20px; color: #333;">
+                    Czy na pewno chcesz usunąć komornika:<br>
+                    <strong>${bailiffName}</strong>?
+                </p>
+                <p style="margin-bottom: 20px; color: #666; font-size: 14px;">
+                    Aby potwierdzić usunięcie, wpisz dokładnie słowo: <strong>potwierdzam</strong>
+                </p>
+                <input type="text" id="deleteConfirmation" placeholder="Wpisz: potwierdzam" style="
+                    width: 100%;
+                    padding: 12px;
+                    border: 2px solid #cbd5e0;
+                    border-radius: 8px;
+                    margin-bottom: 20px;
+                    box-sizing: border-box;
+                    text-align: center;
+                    font-size: 16px;
+                ">
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button onclick="closeDeleteModal()" style="
+                        padding: 12px 24px;
+                        background: #6c757d;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 14px;
+                    ">Anuluj</button>
+                    <button onclick="executeBailiffDeletion(${bailiffId}, '${bailiffName}')" style="
+                        padding: 12px 24px;
+                        background: #dc3545;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 14px;
+                    ">Usuń komornika</button>
+                </div>
+            `;
+
+            confirmModal.appendChild(confirmContent);
+            document.body.appendChild(confirmModal);
+
+            // Focus na pole tekstowe
+            setTimeout(() => {
+                document.getElementById('deleteConfirmation').focus();
+            }, 100);
+        }
+
+        function closeDeleteModal() {
+            const modal = document.querySelector('.delete-confirm-modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        async function executeBailiffDeletion(bailiffId, bailiffName) {
+            const confirmation = document.getElementById('deleteConfirmation').value.trim();
+
+            if (confirmation !== 'potwierdzam') {
+                alert('Nieprawidłowe potwierdzenie. Wpisz dokładnie słowo "potwierdzam"');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/delete-bailiff', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        bailiff_id: bailiffId,
+                        confirmation: confirmation
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Zamknij modal potwierdzenia
+                    closeDeleteModal();
+
+                    // Zamknij modal wyboru komornika
+                    closeBailiffSelector();
+
+                    // Przeładuj listę komorników
+                    await loadBailiffsFromDatabase();
+
+                    // Pokaż powiadomienie o sukcesie
+                    showEmployeeSearchStatus(`✅ ${result.message}`, 'success');
+                } else {
+                    alert(`Błąd: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Błąd usuwania komornika:', error);
+                alert('Wystąpił błąd podczas usuwania komornika');
+            }
+        }
+
+        async function editBailiff(bailiffId, event) {
+            event.stopPropagation();
+
+            console.log('🔧 editBailiff wywołane z bailiffId:', bailiffId, 'typ:', typeof bailiffId);
+
+            try {
+                // Pobierz aktualne dane komornika
+                const response = await fetch('/api/bailiffs');
+                const data = await response.json();
+                console.log('🔧 Wszystkie komornicy z API:', data.bailiffs.map(b => `${b.id}: ${b.imie_nazwisko}`));
+                console.log('🔧 Szukam komornika o ID:', bailiffId);
+                const bailiff = data.bailiffs.find(b => b.id === bailiffId);
+                console.log('🔧 Znaleziony komornik:', bailiff);
+                console.log('🔧 bailiff.imie_nazwisko:', bailiff.imie_nazwisko);
+                console.log('🔧 bailiff.plec:', bailiff.plec);
+                console.log('🔧 bailiff.adres:', bailiff.adres);
+
+                if (!bailiff) {
+                    console.error('🚨 Nie znaleziono komornika o ID:', bailiffId);
+                    alert('Nie znaleziono komornika');
+                    return;
+                }
+
+                // Utwórz modal edycji
+                const editModal = document.createElement('div');
+                editModal.className = 'edit-bailiff-modal';
+                editModal.innerHTML = `
+                    <div style="
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0,0,0,0.5);
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        z-index: 10000;
+                    ">
+                        <div style="
+                            background: white;
+                            padding: 30px;
+                            border-radius: 15px;
+                            max-width: 500px;
+                            width: 90%;
+                            max-height: 90vh;
+                            overflow-y: auto;
+                            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                        ">
+                            <h3 style="margin: 0 0 20px 0; color: #2a5298; text-align: center;">
+                                ✏️ Edycja danych komornika
+                            </h3>
+                            
+                            <form id="editBailiffForm">
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">
+                                        Imię i nazwisko *:
+                                    </label>
+                                    <input type="text" id="modalEditBailiffName" value="${bailiff.imie_nazwisko}" style="
+                                        width: 100%;
+                                        padding: 10px;
+                                        border: 2px solid #cbd5e0;
+                                        border-radius: 8px;
+                                        font-size: 14px;
+                                        box-sizing: border-box;
+                                    " required>
+                                </div>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">
+                                        Płeć *:
+                                    </label>
+                                    <select id="modalEditBailiffGender" style="
+                                        width: 100%;
+                                        padding: 10px;
+                                        border: 2px solid #cbd5e0;
+                                        border-radius: 8px;
+                                        font-size: 14px;
+                                        box-sizing: border-box;
+                                    " required>
+                                        <option value="m" ${bailiff.plec === 'm' ? 'selected' : ''}>Mężczyzna</option>
+                                        <option value="k" ${bailiff.plec === 'k' ? 'selected' : ''}>Kobieta</option>
+                                    </select>
+                                </div>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">
+                                        Adres *:
+                                    </label>
+                                    <input type="text" id="modalEditBailiffAddress" value="${bailiff.adres}" style="
+                                        width: 100%;
+                                        padding: 10px;
+                                        border: 2px solid #cbd5e0;
+                                        border-radius: 8px;
+                                        font-size: 14px;
+                                        box-sizing: border-box;
+                                    " required>
+                                </div>
+                                
+                                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                                    <div style="flex: 1;">
+                                        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">
+                                            Kod pocztowy *:
+                                        </label>
+                                        <input type="text" id="modalEditBailiffPostalCode" value="${bailiff.kod_pocztowy}" style="
+                                            width: 100%;
+                                            padding: 10px;
+                                            border: 2px solid #cbd5e0;
+                                            border-radius: 8px;
+                                            font-size: 14px;
+                                            box-sizing: border-box;
+                                        " required>
+                                    </div>
+                                    <div style="flex: 2;">
+                                        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">
+                                            Miasto *:
+                                        </label>
+                                        <input type="text" id="modalEditBailiffCity" value="${bailiff.miasto}" style="
+                                            width: 100%;
+                                            padding: 10px;
+                                            border: 2px solid #cbd5e0;
+                                            border-radius: 8px;
+                                            font-size: 14px;
+                                            box-sizing: border-box;
+                                        " required>
+                                    </div>
+                                </div>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">
+                                        Telefon:
+                                    </label>
+                                    <input type="text" id="modalEditBailiffPhone" value="${bailiff.telefon || ''}" style="
+                                        width: 100%;
+                                        padding: 10px;
+                                        border: 2px solid #cbd5e0;
+                                        border-radius: 8px;
+                                        font-size: 14px;
+                                        box-sizing: border-box;
+                                    ">
+                                </div>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">
+                                        Email:
+                                    </label>
+                                    <input type="email" id="modalEditBailiffEmail" value="${bailiff.email || ''}" style="
+                                        width: 100%;
+                                        padding: 10px;
+                                        border: 2px solid #cbd5e0;
+                                        border-radius: 8px;
+                                        font-size: 14px;
+                                        box-sizing: border-box;
+                                    ">
+                                </div>
+                                
+                                <div style="margin-bottom: 20px;">
+                                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">
+                                        Sąd rejonowy:
+                                    </label>
+                                    <input type="text" id="modalEditBailiffCourt" value="${bailiff.sad_rejonowy || ''}" style="
+                                        width: 100%;
+                                        padding: 10px;
+                                        border: 2px solid #cbd5e0;
+                                        border-radius: 8px;
+                                        font-size: 14px;
+                                        box-sizing: border-box;
+                                    ">
+                                </div>
+                                
+                                <div style="display: flex; gap: 10px; justify-content: center;">
+                                    <button type="button" onclick="closeEditModal()" style="
+                                        flex: 1;
+                                        padding: 12px;
+                                        background: #6c757d;
+                                        color: white;
+                                        border: none;
+                                        border-radius: 8px;
+                                        cursor: pointer;
+                                        font-weight: bold;
+                                        transition: all 0.3s ease;
+                                    ">Anuluj</button>
+                                    <button type="button" onclick="executeBailiffUpdate(` + bailiffId + `)" style="
+                                        flex: 1;
+                                        padding: 12px;
+                                        background: #28a745;
+                                        color: white;
+                                        border: none;
+                                        border-radius: 8px;
+                                        cursor: pointer;
+                                        font-weight: bold;
+                                        transition: all 0.3s ease;
+                                    ">Zapisz zmiany</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(editModal);
+
+                // Debug: sprawdź czy wartości zostały poprawnie wstawione
+                setTimeout(() => {
+                    const nameField = document.getElementById('modalEditBailiffName');
+                    const genderField = document.getElementById('modalEditBailiffGender');
+                    const addressField = document.getElementById('modalEditBailiffAddress');
+                    console.log('🔧 Wartość w polu nazwa po utworzeniu modalu:', nameField ? nameField.value : 'POLE NIE ISTNIEJE');
+                    console.log('🔧 Wartość w polu płeć po utworzeniu modalu:', genderField ? genderField.value : 'POLE NIE ISTNIEJE');
+                    console.log('🔧 Wartość w polu adres po utworzeniu modalu:', addressField ? addressField.value : 'POLE NIE ISTNIEJE');
+                }, 100);
+
+                // Focus na pierwsze pole
+                setTimeout(() => {
+                    document.getElementById('modalEditBailiffName').focus();
+                }, 100);
+
+                // Obsługa klawisza Enter w formularzu
+                const form = document.getElementById('editBailiffForm');
+                form.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault(); // Zapobiega domyślnej akcji formularza
+                        console.log('🔧 Naciśnięto Enter - zapisuję zmiany');
+                        executeBailiffUpdate(bailiffId);
+                    } else if (event.key === 'Escape') {
+                        event.preventDefault();
+                        console.log('🔧 Naciśnięto Escape - zamykam modal');
+                        closeEditModal();
+                    }
+                });
+
+                // Globalna obsługa Escape dla całego dokumentu
+                const escapeHandler = function (event) {
+                    if (event.key === 'Escape') {
+                        const modal = document.querySelector('.edit-bailiff-modal');
+                        if (modal) {
+                            console.log('🔧 Globalny Escape - zamykam modal');
+                            closeEditModal();
+                        }
+                    }
+                };
+
+                // Rejestruj handler i zapisz do późniejszego usunięcia
+                if (!document._bailiffEscapeHandlers) {
+                    document._bailiffEscapeHandlers = [];
+                }
+                document._bailiffEscapeHandlers.push(escapeHandler);
+                document.addEventListener('keydown', escapeHandler);
+
+            } catch (error) {
+                console.error('Błąd podczas otwierania edycji:', error);
+                alert('Wystąpił błąd podczas otwierania formularza edycji');
+            }
+        }
+
+        function closeEditModal() {
+            const modal = document.querySelector('.edit-bailiff-modal');
+            if (modal) {
+                // Usuń globalne event listenery
+                const existingHandlers = document._bailiffEscapeHandlers || [];
+                existingHandlers.forEach(handler => {
+                    document.removeEventListener('keydown', handler);
+                });
+                document._bailiffEscapeHandlers = [];
+
+                modal.remove();
+            }
+        }
+
+        async function executeBailiffUpdate(bailiffId) {
+            console.log('🔧 executeBailiffUpdate wywołane z bailiffId:', bailiffId, 'typ:', typeof bailiffId);
+
+            const name = document.getElementById('modalEditBailiffName').value.trim();
+            const gender = document.getElementById('modalEditBailiffGender').value;
+            const address = document.getElementById('modalEditBailiffAddress').value.trim();
+            const postalCode = document.getElementById('modalEditBailiffPostalCode').value.trim();
+            const city = document.getElementById('modalEditBailiffCity').value.trim();
+            const phone = document.getElementById('modalEditBailiffPhone').value.trim();
+            const email = document.getElementById('modalEditBailiffEmail').value.trim();
+            const court = document.getElementById('modalEditBailiffCourt').value.trim();
+
+            console.log('🔧 Dane do wysłania:', {
+                bailiff_id: bailiffId,
+                imie_nazwisko: name,
+                plec: gender,
+                adres: address,
+                kod_pocztowy: postalCode,
+                miasto: city,
+                telefon: phone,
+                email: email,
+                sad_rejonowy: court
+            });
+
+            // Walidacja wymaganych pól
+            console.log('🔧 Sprawdzam walidację pól:');
+            console.log('🔧 name:', name, 'długość:', name.length);
+            console.log('🔧 gender:', gender);
+            console.log('🔧 address:', address, 'długość:', address.length);
+            console.log('🔧 postalCode:', postalCode, 'długość:', postalCode.length);
+            console.log('🔧 city:', city, 'długość:', city.length);
+
+            if (!name || !gender || !address || !postalCode || !city) {
+                console.error('🚨 Walidacja nie przeszła!');
+                alert('Wszystkie pola oznaczone * są wymagane');
+                return;
+            }
+
+            console.log('✅ Walidacja przeszła, wysyłam request...');
+
+            try {
+                console.log('🌐 Rozpoczynam fetch do /api/update-bailiff');
+                console.log('🌐 Current URL:', window.location.href);
+                console.log('🌐 Fetch URL będzie:', new URL('/api/update-bailiff', window.location.href).href);
+
+                const response = await fetch('/api/update-bailiff', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    },
+                    cache: 'no-cache',
+                    body: JSON.stringify({
+                        bailiff_id: bailiffId,
+                        imie_nazwisko: name,
+                        plec: gender,
+                        adres: address,
+                        kod_pocztowy: postalCode,
+                        miasto: city,
+                        telefon: phone,
+                        email: email,
+                        sad_rejonowy: court,
+                        timestamp: Date.now()
+                    })
+                });
+
+                console.log('🌐 Otrzymałem response:', response);
+                console.log('🌐 Response status:', response.status);
+                console.log('🌐 Response ok:', response.ok);
+
+                const result = await response.json();
+                console.log('🌐 Response JSON:', result);
+
+                if (response.ok) {
+                    console.log('Sukces aktualizacji komornika:', result);
+
+                    // Zamknij modal edycji
+                    closeEditModal();
+
+                    // Przeładuj listę komorników
+                    await loadBailiffsFromDatabase();
+
+                    // Sprawdź czy edytowany komornik jest aktualnie używany w jakimś formularzu
+                    // i jeśli tak, zaktualizuj dane w formularzu
+                    updateFormularzeWithEditedBailiff(bailiffId, result.bailiff);
+
+                    // Sprawdź czy modal wyboru komornika jest otwarty
+                    const selectorModal = document.querySelector('.bailiff-selector-modal');
+                    if (selectorModal) {
+                        console.log('Modal jest otwarty, odświeżam jego zawartość');
+                        // Zamiast zamykać modal, odśwież jego zawartość
+                        const bailiffList = selectorModal.querySelector('.bailiff-list');
+                        if (bailiffList) {
+                            // Znajdź bailiffIndex z onclick handlera
+                            const currentBailiffIndex = window.currentBailiffSelectorIndex || 0;
+
+                            // Wygeneruj nową listę HTML
+                            bailiffList.innerHTML = predefinedBailiffs.map((bailiff, index) => `
+                                <div class="bailiff-option" style="
+                                    padding: 15px;
+                                    border: 2px solid #cbd5e0;
+                                    border-radius: 10px;
+                                    margin-bottom: 10px;
+                                    transition: all 0.3s ease;
+                                    display: flex;
+                                    justify-content: space-between;
+                                    align-items: center;
+                                " onmouseover="this.style.borderColor='#2a5298'; this.style.background='#e6f2ff';" 
+                                   onmouseout="this.style.borderColor='#cbd5e0'; this.style.background='white';">
+                                    <div onclick="selectBailiff(${index}, ${currentBailiffIndex})" style="flex: 1; cursor: pointer;">
+                                        <strong>${bailiff.imieNazwisko}</strong><br>
+                                        <small style="color: #666;">${bailiff.adres}, ${bailiff.kodPocztowy} ${bailiff.miasto}</small>
+                                    </div>
+                                    <div style="display: flex; gap: 5px;">
+                                        <button onclick="editBailiff(${bailiff.id}, event)" style="
+                                            background: #28a745;
+                                            color: white;
+                                            border: none;
+                                            padding: 8px 12px;
+                                            border-radius: 6px;
+                                            cursor: pointer;
+                                            font-size: 12px;
+                                        ">✏️ Edytuj</button>
+                                        <button onclick="confirmDeleteBailiff(${bailiff.id}, '${bailiff.imie_nazwisko}', event)" style="
+                                            background: #dc3545;
+                                            color: white;
+                                            border: none;
+                                            padding: 8px 12px;
+                                            border-radius: 6px;
+                                            cursor: pointer;
+                                            font-size: 12px;
+                                        ">🗑️ Usuń</button>
+                                    </div>
+                                </div>
+                            `).join('');
+                            console.log('Odświeżono zawartość modalu z nowymi danymi');
+                        }
+                    }
+
+                    // Pokaż powiadomienie o sukcesie
+                    showEmployeeSearchStatus(`✅ ${result.message}`, 'success');
+                } else {
+                    alert(`Błąd: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Błąd aktualizacji komornika:', error);
+                console.error('Szczegóły błędu:', error.message, error.stack);
+                alert('Wystąpił błąd podczas aktualizacji danych komornika');
+            }
+        }
+
+        function updateFormularzeWithEditedBailiff(bailiffId, updatedBailiff) {
+            console.log('Aktualizacja formularzy dla komornika:', bailiffId, updatedBailiff);
+
+            // Najpierw znajdź stare dane komornika przed aktualizacją
+            const oldBailiff = predefinedBailiffs.find(b => b.id === bailiffId);
+            const oldName = oldBailiff ? oldBailiff.imieNazwisko : null;
+
+            console.log('Stara nazwa komornika:', oldName);
+
+            // Teraz zaktualizuj tablicę predefinedBailiffs
+            const bailiffIndex = predefinedBailiffs.findIndex(b => b.id === bailiffId);
+            if (bailiffIndex !== -1) {
+                predefinedBailiffs[bailiffIndex] = {
+                    id: updatedBailiff.id,
+                    imieNazwisko: updatedBailiff.imie_nazwisko,
+                    adres: updatedBailiff.adres,
+                    miasto: updatedBailiff.miasto,
+                    kodPocztowy: updatedBailiff.kod_pocztowy,
+                    telefon: updatedBailiff.telefon,
+                    email: updatedBailiff.email,
+                    sadRejonowy: updatedBailiff.sad_rejonowy
+                };
+                console.log('Zaktualizowano tablicę predefinedBailiffs');
+            }
+
+            // Sprawdź wszystkie formularze czy któryś używa edytowanego komornika
+            // Sprawdź główny formularz komornika
+            const mainBailiffNameInput = document.querySelector('input[name="bailiffName"]');
+            if (mainBailiffNameInput && mainBailiffNameInput.value.trim()) {
+                console.log('Sprawdzam główny formularz, obecna nazwa:', mainBailiffNameInput.value.trim());
+                // Sprawdź czy to jest ten sam komornik (porównaj przez starą nazwę)
+                if (oldName && mainBailiffNameInput.value.trim() === oldName) {
+                    console.log('Aktualizuję główny formularz');
+                    // Zaktualizuj główny formularz
+                    mainBailiffNameInput.value = updatedBailiff.imie_nazwisko;
+                    const mainBailiffAddressInput = document.querySelector('input[name="bailiffAddress"]');
+                    const mainBailiffCityInput = document.querySelector('input[name="bailiffCity"]');
+                    if (mainBailiffAddressInput) mainBailiffAddressInput.value = updatedBailiff.adres;
+                    if (mainBailiffCityInput) mainBailiffCityInput.value = `${updatedBailiff.kod_pocztowy} ${updatedBailiff.miasto}`;
+                }
+            }
+
+            // Sprawdź dodatkowe formularze komorników
+            for (let i = 0; i < 10; i++) { // sprawdź do 10 dodatkowych formularzy
+                const additionalNameInput = document.querySelector(`input[name="additionalBailiffName${i}"]`);
+                if (additionalNameInput && additionalNameInput.value.trim()) {
+                    console.log(`Sprawdzam dodatkowy formularz ${i}, obecna nazwa:`, additionalNameInput.value.trim());
+                    // Sprawdź czy to jest ten sam komornik (porównaj przez starą nazwę)
+                    if (oldName && additionalNameInput.value.trim() === oldName) {
+                        console.log(`Aktualizuję dodatkowy formularz ${i}`);
+                        // Zaktualizuj dodatkowy formularz
+                        additionalNameInput.value = updatedBailiff.imie_nazwisko;
+                        const additionalAddressInput = document.querySelector(`input[name="additionalBailiffAddress${i}"]`);
+                        const additionalCityInput = document.querySelector(`input[name="additionalBailiffCity${i}"]`);
+                        if (additionalAddressInput) additionalAddressInput.value = updatedBailiff.adres;
+                        if (additionalCityInput) additionalCityInput.value = `${updatedBailiff.kod_pocztowy} ${updatedBailiff.miasto}`;
+
+                        // Zaktualizuj notice o automatycznym wypełnieniu
+                        const autoFilledNotice = document.getElementById(`autoFilledNotice${i}`);
+                        if (autoFilledNotice) {
+                            autoFilledNotice.innerHTML = `✅ Dane zostały automatycznie uzupełnione z bazy: <strong>${updatedBailiff.imie_nazwisko}</strong>`;
+                        }
+                    }
+                }
+            }
+
+            // Odśwież podsumowanie komorników
+            updateBailiffSummary();
+            console.log('Zakończono aktualizację formularzy');
+        }
+
+        function hideButtonsAndShowAutoFilledNotice(formIndex, bailiffName) {
+            // Ukryj przyciski wyboru/dodawania
+            const buttonsGroup = document.getElementById(`bailiffButtons${formIndex}`);
+            if (buttonsGroup) {
+                buttonsGroup.classList.add('auto-filled');
+
+                // Dodaj informację o automatycznym uzupełnieniu
+                const notice = document.createElement('div');
+                notice.className = 'auto-filled-notice';
+                notice.id = `autoFilledNotice${formIndex}`;
+                notice.innerHTML = `
+                    <span>🤖</span>
+                    <span>Dane komornika "${bailiffName}" zostały uzupełnione automatycznie z bazy danych.</span>
+                    <button type="button" onclick="showButtonsAndRemoveNotice(${formIndex})" style="
+                        background: none; 
+                        border: 1px solid #4caf50; 
+                        color: #2e7d32; 
+                        padding: 2px 8px; 
+                        border-radius: 4px; 
+                        font-size: 12px; 
+                        margin-left: auto;
+                        cursor: pointer;
+                    ">Usuń komornika</button>
+                `;
+
+                // Wstaw przed grid z danymi komornika
+                const bailiffGrid = buttonsGroup.nextElementSibling;
+                buttonsGroup.parentNode.insertBefore(notice, bailiffGrid);
+            }
+        }
+
+        function showButtonsAndRemoveNotice(formIndex) {
+            // Pokaż przyciski
+            const buttonsGroup = document.getElementById(`bailiffButtons${formIndex}`);
+            if (buttonsGroup) {
+                buttonsGroup.classList.remove('auto-filled');
+            }
+
+            // Usuń informację
+            const notice = document.getElementById(`autoFilledNotice${formIndex}`);
+            if (notice) {
+                notice.remove();
+            }
+
+            // Wyczyść pola
+            const nameInput = document.querySelector(`input[name="additionalBailiffName${formIndex}"]`);
+            const addressInput = document.querySelector(`input[name="additionalBailiffAddress${formIndex}"]`);
+            const cityInput = document.querySelector(`input[name="additionalBailiffCity${formIndex}"]`);
+            const caseInput = document.querySelector(`input[name="additionalBailiffCase${formIndex}"]`);
+            const dateInput = document.querySelector(`input[name="additionalBailiffDate${formIndex}"]`);
+
+            if (nameInput) nameInput.value = '';
+            if (addressInput) addressInput.value = '';
+            if (cityInput) cityInput.value = '';
+            if (caseInput) caseInput.value = '';
+            if (dateInput) dateInput.value = '';
+
+            updateBailiffSummary();
+        }
+
+        function hideButtonsAndShowManualFilledNotice(formIndex, bailiffName) {
+            // Ukryj przyciski wyboru/dodawania
+            const buttonsGroup = document.getElementById(`bailiffButtons${formIndex}`);
+            if (buttonsGroup) {
+                buttonsGroup.classList.add('auto-filled');
+
+                // Dodaj informację o ręcznym uzupełnieniu
+                const notice = document.createElement('div');
+                notice.className = 'auto-filled-notice';
+                notice.id = `autoFilledNotice${formIndex}`;
+                notice.innerHTML = `
+                    <span>✏️</span>
+                    <span>Dane komornika "${bailiffName}" zostały uzupełnione ręcznie.</span>
+                    <button type="button" onclick="showButtonsAndRemoveNotice(${formIndex})" style="
+                        background: none; 
+                        border: 1px solid #4caf50; 
+                        color: #2e7d32; 
+                        padding: 2px 8px; 
+                        border-radius: 4px; 
+                        font-size: 12px; 
+                        margin-left: auto;
+                        cursor: pointer;
+                    ">Usuń komornika</button>
+                `;
+
+                // Wstaw przed grid z danymi komornika
+                const bailiffGrid = buttonsGroup.nextElementSibling;
+                if (bailiffGrid) {
+                    buttonsGroup.parentNode.insertBefore(notice, bailiffGrid);
+                }
+            }
+        }
+
+        function openAddBailiffForm() {
+            // Zamknij poprzedni modal
+            closeBailiffSelector();
+
+            // Stwórz modal do dodawania komornika
+            const modal = document.createElement('div');
+            modal.className = 'add-bailiff-modal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.7);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+                font-family: Arial, sans-serif;
+            `;
+
+            const modalContent = document.createElement('div');
+            modalContent.style.cssText = `
+                background: white;
+                padding: 30px;
+                border-radius: 15px;
+                width: 500px;
+                max-width: 90vw;
+                max-height: 90vh;
+                overflow-y: auto;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            `;
+
+            modalContent.innerHTML = `
+                <h3 style="margin-bottom: 25px; color: #2a5298; text-align: center;">
+                    ➕ Dodaj nowego komornika
+                </h3>
+                <form id="addBailiffForm" style="display: flex; flex-direction: column; gap: 15px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">
+                            Imię i nazwisko *
+                        </label>
+                        <input type="text" id="bailiff_name" required style="
+                            width: 100%;
+                            padding: 10px;
+                            border: 2px solid #cbd5e0;
+                            border-radius: 8px;
+                            font-size: 14px;
+                            box-sizing: border-box;
+                        " placeholder="np. Anna Kowalska">
+                    </div>
+                    
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">
+                            Płeć *
+                        </label>
+                        <select id="bailiff_gender" required style="
+                            width: 100%;
+                            padding: 10px;
+                            border: 2px solid #cbd5e0;
+                            border-radius: 8px;
+                            font-size: 14px;
+                            box-sizing: border-box;
+                        ">
+                            <option value="">Wybierz płeć</option>
+                            <option value="k">Kobieta</option>
+                            <option value="m">Mężczyzna</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">
+                            Adres *
+                        </label>
+                        <input type="text" id="bailiff_address" required style="
+                            width: 100%;
+                            padding: 10px;
+                            border: 2px solid #cbd5e0;
+                            border-radius: 8px;
+                            font-size: 14px;
+                            box-sizing: border-box;
+                        " placeholder="np. ul. Piotrkowska 123">
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px;">
+                        <div style="flex: 1;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">
+                                Kod pocztowy *
+                            </label>
+                            <input type="text" id="bailiff_postal" required pattern="[0-9]{2}-[0-9]{3}" style="
+                                width: 100%;
+                                padding: 10px;
+                                border: 2px solid #cbd5e0;
+                                border-radius: 8px;
+                                font-size: 14px;
+                                box-sizing: border-box;
+                            " placeholder="90-001">
+                        </div>
+                        
+                        <div style="flex: 2;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">
+                                Miasto *
+                            </label>
+                            <input type="text" id="bailiff_city" required style="
+                                width: 100%;
+                                padding: 10px;
+                                border: 2px solid #cbd5e0;
+                                border-radius: 8px;
+                                font-size: 14px;
+                                box-sizing: border-box;
+                            " placeholder="Łódź">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">
+                            Telefon
+                        </label>
+                        <input type="tel" id="bailiff_phone" style="
+                            width: 100%;
+                            padding: 10px;
+                            border: 2px solid #cbd5e0;
+                            border-radius: 8px;
+                            font-size: 14px;
+                            box-sizing: border-box;
+                        " placeholder="42-123-45-67">
+                    </div>
+                    
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">
+                            Email
+                        </label>
+                        <input type="email" id="bailiff_email" style="
+                            width: 100%;
+                            padding: 10px;
+                            border: 2px solid #cbd5e0;
+                            border-radius: 8px;
+                            font-size: 14px;
+                            box-sizing: border-box;
+                        " placeholder="email@komornik.pl">
+                    </div>
+                    
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">
+                            Sąd rejonowy
+                        </label>
+                        <input type="text" id="bailiff_court" style="
+                            width: 100%;
+                            padding: 10px;
+                            border: 2px solid #cbd5e0;
+                            border-radius: 8px;
+                            font-size: 14px;
+                            box-sizing: border-box;
+                        " placeholder="Sąd Rejonowy w Łodzi">
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button type="submit" style="
+                            flex: 1;
+                            padding: 15px;
+                            background: #28a745;
+                            color: white;
+                            border: none;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-weight: bold;
+                            font-size: 16px;
+                        ">💾 Zapisz komornika</button>
+                        
+                        <button type="button" onclick="closeAddBailiffForm()" style="
+                            flex: 1;
+                            padding: 15px;
+                            background: #6c757d;
+                            color: white;
+                            border: none;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-size: 16px;
+                        ">Anuluj</button>
+                    </div>
+                </form>
+            `;
+
+            modal.appendChild(modalContent);
+            document.body.appendChild(modal);
+
+            // Obsługa formularza
+            document.getElementById('addBailiffForm').addEventListener('submit', saveBailiff);
+
+            // Zamykanie na kliknięcie tła
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeAddBailiffForm();
+                }
+            });
+        }
+
+        function closeAddBailiffForm() {
+            const modal = document.querySelector('.add-bailiff-modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        async function saveBailiff(event) {
+            event.preventDefault();
+
+            const formData = {
+                imie_nazwisko: document.getElementById('bailiff_name').value.trim(),
+                plec: document.getElementById('bailiff_gender').value,
+                adres: document.getElementById('bailiff_address').value.trim(),
+                kod_pocztowy: document.getElementById('bailiff_postal').value.trim(),
+                miasto: document.getElementById('bailiff_city').value.trim(),
+                telefon: document.getElementById('bailiff_phone').value.trim(),
+                email: document.getElementById('bailiff_email').value.trim(),
+                sad_rejonowy: document.getElementById('bailiff_court').value.trim()
+            };
+
+            // Walidacja wymaganych pól
+            if (!formData.imie_nazwisko || !formData.plec || !formData.adres || !formData.kod_pocztowy || !formData.miasto) {
+                showEmployeeSearchStatus('❌ Proszę wypełnić wszystkie wymagane pola (oznaczone *)', 'error');
+                return;
+            }
+
+            // Walidacja kodu pocztowego
+            const postalRegex = /^[0-9]{2}-[0-9]{3}$/;
+            if (!postalRegex.test(formData.kod_pocztowy)) {
+                showEmployeeSearchStatus('❌ Kod pocztowy musi być w formacie XX-XXX', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/add-bailiff', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showEmployeeSearchStatus(`✅ Komornik ${formData.imie_nazwisko} został dodany pomyślnie!`, 'success');
+                    closeAddBailiffForm();
+
+                    // Odśwież listę komorników
+                    await loadBailiffsFromDatabase();
+
+                    // Sprawdź czy modal wyboru komornika jest otwarty i odśwież go
+                    const selectorModal = document.querySelector('.bailiff-selector-modal');
+                    if (selectorModal) {
+                        console.log('Modal jest otwarty po dodaniu nowego komornika, odświeżam jego zawartość');
+                        const bailiffList = selectorModal.querySelector('.bailiff-list');
+                        if (bailiffList) {
+                            const currentBailiffIndex = window.currentBailiffSelectorIndex || 0;
+
+                            // Wygeneruj nową listę HTML z nowym komornikiem
+                            bailiffList.innerHTML = predefinedBailiffs.map((bailiff, index) => `
+                                <div class="bailiff-option" style="
+                                    padding: 15px;
+                                    border: 2px solid #cbd5e0;
+                                    border-radius: 10px;
+                                    margin-bottom: 10px;
+                                    transition: all 0.3s ease;
+                                    display: flex;
+                                    justify-content: space-between;
+                                    align-items: center;
+                                " onmouseover="this.style.borderColor='#2a5298'; this.style.background='#e6f2ff';" 
+                                   onmouseout="this.style.borderColor='#cbd5e0'; this.style.background='white';">
+                                    <div onclick="selectBailiff(${index}, ${currentBailiffIndex})" style="flex: 1; cursor: pointer;">
+                                        <strong>${bailiff.imieNazwisko}</strong><br>
+                                        <small style="color: #666;">${bailiff.adres}, ${bailiff.kodPocztowy} ${bailiff.miasto}</small>
+                                    </div>
+                                    <div style="display: flex; gap: 5px;">
+                                        <button onclick="editBailiff(${bailiff.id}, event)" style="
+                                            background: #007bff;
+                                            color: white;
+                                            border: none;
+                                            padding: 8px 12px;
+                                            border-radius: 6px;
+                                            cursor: pointer;
+                                            font-size: 12px;
+                                        ">✏️ Edytuj</button>
+                                        <button onclick="confirmDeleteBailiff(${bailiff.id}, '${bailiff.imieNazwisko}', event)" style="
+                                            background: #dc3545;
+                                            color: white;
+                                            border: none;
+                                            padding: 8px 12px;
+                                            border-radius: 6px;
+                                            cursor: pointer;
+                                            font-size: 12px;
+                                        ">🗑️ Usuń</button>
+                                    </div>
+                                </div>
+                            `).join('');
+                            console.log('Lista w modalu została odświeżona z nowym komornikiem');
+                        }
+                    }
+                } else {
+                    showEmployeeSearchStatus(`❌ ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Błąd dodawania komornika:', error);
+                showEmployeeSearchStatus('❌ Wystąpił błąd podczas dodawania komornika', 'error');
+            }
+        }
+
+        function updateBailiffSummary() {
+            const summaryContainer = document.getElementById('bailiffSummary');
+            const additionalBailiffs = document.querySelectorAll('.bailiff-entry');
+
+            if (additionalBailiffs.length === 0) {
+                summaryContainer.innerHTML = '';
+                return;
+            }
+
+            let summaryHTML = '<h4>Podsumowanie komorników:</h4>';
+
+            summaryHTML += `
+                <div class="bailiff-summary">
+                    <strong>Komornik A (główny):</strong> ${document.getElementById('zbiegBailiffA_Name').value}<br>
+                    <strong>Sprawa:</strong> ${document.getElementById('zbiegBailiffA_Case').value}<br>
+                    <strong>Data wpływu:</strong> ${document.getElementById('zbiegDate').value}
+                </div>
+            `;
+
+            additionalBailiffs.forEach((bailiff, index) => {
+                const inputs = bailiff.querySelectorAll('input');
+                const name = inputs[0].value;
+                const caseNum = inputs[1].value;
+                const address = inputs[2].value;
+                const city = inputs[3].value;
+                const date = inputs[4].value;
+
+                // Pobierz rzeczywisty indeks z nazwy pola input
+                const nameInput = inputs[0];
+                const bailiffIndex = nameInput.name.match(/additionalBailiffName(\d+)/)[1];
+
+                summaryHTML += `
+                    <div class="bailiff-summary">
+                        <strong>Komornik ${String.fromCharCode(66 + index)}:</strong> ${name || '[nie podano]'}<br>
+                        <strong>Sprawa:</strong> ${caseNum || '[nie podano]'}<br>
+                        <strong>Data wpływu:</strong> ${date || '[nie podano]'}
+                    </div>
+                `;
+
+                // Sprawdź czy pola są wypełnione ręcznie (nie przez auto-fill)
+                const buttonsGroup = document.getElementById(`bailiffButtons${bailiffIndex}`);
+                const notice = document.getElementById(`autoFilledNotice${bailiffIndex}`);
+
+                if (name && address && city && caseNum && date && !notice) {
+                    // Pola są wypełnione ręcznie - ukryj przyciski i pokaż informację
+                    if (buttonsGroup && !buttonsGroup.classList.contains('auto-filled')) {
+                        hideButtonsAndShowManualFilledNotice(bailiffIndex, name);
+                    }
+                } else if (!name && !address && !city && !caseNum && !date && !notice) {
+                    // Pola są puste i nie ma auto-fill - pokaż przyciski
+                    if (buttonsGroup && buttonsGroup.classList.contains('auto-filled')) {
+                        showButtonsAndRemoveNotice(bailiffIndex);
+                    }
+                }
+            });
+
+            summaryContainer.innerHTML = summaryHTML;
+        }
+
+        async function generateLetters() {
+            if (!selectedOption) {
+                alert('Wybierz opcję weryfikacji!');
+                return;
+            }
+
+            // Pokaż postęp i zablokuj przycisk
+            const generateBtn = document.getElementById('generateBtn');
+            generateBtn.textContent = 'Generuję...';
+            generateBtn.disabled = true;
+
+            const payload = {
+                option: selectedOption,
+                company: document.getElementById('company').value,
+                dane: {
+                    komornik: {
+                        imieNazwisko: document.getElementById('editBailiffName').value,
+                        adres: document.getElementById('editBailiffAddress').value,
+                        miasto: document.getElementById('editBailiffCity').value,
+                        kontakt: document.getElementById('editBailiffContact').value
+                    },
+                    dluznik: {
+                        imieNazwisko: document.getElementById('editDebtorName').value,
+                        pesel: document.getElementById('editDebtorPesel').value
+                    },
+                    sprawa: {
+                        sygnaturaSprawy: document.getElementById('editCaseNumber').value,
+                        numerRachunku: document.getElementById('editBankAccount').value
+                    },
+                    dataZakonczania: (selectedOption === 1 && document.getElementById('endDate')) ? document.getElementById('endDate').value : null,
+                    umowy: {
+                        zlecenie: (selectedOption === 3 && document.getElementById('contractType1')) ? document.getElementById('contractType1').checked : false,
+                        najem: (selectedOption === 3 && document.getElementById('contractType2')) ? document.getElementById('contractType2').checked : false
+                    },
+                    komornicy: []
+                }
+            };
+            // NOWA LOGIKA: jeśli tryb universal, generuj inaczej
+            if (window.currentClassification && !window.currentClassification.is_komornicze) {
+                // Zbierz wartości pól z formularza
+                const updatedFields = (window.currentFields || []).map(field => ({
+                    ...field,
+                    value: document.getElementById(`ufield_${field.id}`)?.value || field.value
+                }));
+
+                try {
+                    const response = await fetch('/generate-universal-letter', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            category: window.currentClassification.category,
+                            subtype: window.currentClassification.subtype,
+                            fields: updatedFields,
+                            company: document.getElementById('company').value,
+                            scenario: document.getElementById('universal-scenario')?.value || null
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (response.ok) {
+                        allGeneratedLetters = [{
+                            title: result.title,
+                            content: result.list,
+                            bailiff: { imieNazwisko: window.currentClassification.subtype }
+                        }];
+                        currentLetterIndex = 0;
+                        displayMultipleLetters(allGeneratedLetters);
+                        goToStep(4);
+                    } else {
+                        alert('Błąd generowania listu: ' + result.error);
+                    }
+                } catch (error) {
+                    alert('Nie udało się połączyć z serwerem.');
+                } finally {
+                    generateBtn.textContent = 'Generuj Listy';
+                    generateBtn.disabled = false;
+                }
+                return; // ważne - zatrzymaj dalsze wykonanie
+            }
+
+            if (selectedOption == 4) {
+                // Dodaj główny komornik ze zbiegu
+                payload.dane.komornicy.push({
+                    imieNazwisko: document.getElementById('zbiegBailiffA_Name').value,
+                    adres: document.getElementById('zbiegBailiffA_Address').value,
+                    miasto: document.getElementById('zbiegBailiffA_City').value,
+                    sygnaturaSprawy: document.getElementById('zbiegBailiffA_Case').value,
+                    dataWplywu: document.getElementById('zbiegDate').value
+                });
+
+                // Dodaj dodatkowych komorników
+                const additionalBailiffs = document.querySelectorAll('.bailiff-entry');
+                additionalBailiffs.forEach((bailiff) => {
+                    const inputs = bailiff.querySelectorAll('input');
+                    payload.dane.komornicy.push({
+                        imieNazwisko: inputs[0].value,
+                        adres: inputs[2].value,
+                        miasto: inputs[3].value,
+                        sygnaturaSprawy: inputs[1].value,
+                        dataWplywu: inputs[4].value
+                    });
+                });
+
+                // Generuj osobny list dla każdego komornika w przypadku zbiegu
+                try {
+                    const response = await fetch('/generate-zbieg-letters', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        allGeneratedLetters = result.listy;
+                        currentLetterIndex = 0;
+                        displayMultipleLetters(allGeneratedLetters);
+                        goToStep(4);
+                    } else {
+                        alert('Błąd generowania listów: ' + result.error);
+                        // Przywróć tekst przycisku w przypadku błędu
+                        generateBtn.textContent = 'Generuj Listy';
+                        generateBtn.disabled = false;
+                    }
+                } catch (error) {
+                    console.error('Błąd połączenia z serwerem:', error);
+                    alert('Nie udało się połączyć z serwerem. Sprawdź, czy serwer działa.');
+                    // Przywróć tekst przycisku w przypadku błędu
+                    generateBtn.textContent = 'Generuj Listy';
+                    generateBtn.disabled = false;
+                }
+            } else {
+                // Standardowe generowanie jednego listu
+                try {
+                    const response = await fetch('/generate-letter', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        allGeneratedLetters = [{ title: 'Wygenerowany List', content: result.list, bailiff: payload.dane.komornik }];
+                        currentLetterIndex = 0;
+                        displayMultipleLetters(allGeneratedLetters);
+                        goToStep(4);
+                    } else {
+                        alert('Błąd generowania listu: ' + result.error);
+                        // Przywróć tekst przycisku w przypadku błędu
+                        generateBtn.textContent = 'Generuj Listy';
+                        generateBtn.disabled = false;
+                    }
+                } catch (error) {
+                    console.error('Błąd połączenia z serwerem:', error);
+                    alert('Nie udało się połączyć z serwerem. Sprawdź, czy serwer działa.');
+                    // Przywróć tekst przycisku w przypadku błędu
+                    generateBtn.textContent = 'Generuj Listy';
+                    generateBtn.disabled = false;
+                }
+            }
+
+            // Przywróć oryginalny tekst i odblokuj przycisk
+            generateBtn.textContent = 'Generuj Listy';
+            generateBtn.disabled = false;
+        }
+
+        function displayLetters(letters) {
+            const container = document.getElementById('generatedLetters');
+            container.innerHTML = '';
+
+            if (letters.length > 1) {
+                container.innerHTML += `<div style="background: #e7f3ff; padding: 15px; border-radius: 10px; margin-bottom: 20px;"><strong>📄 Wygenerowano ${letters.length} listów</strong></div>`;
+            }
+
+            letters.forEach((letter, index) => {
+                const letterDiv = document.createElement('div');
+                letterDiv.innerHTML = `
+                    <div style="margin-bottom: 20px;">
+                        <h3>${letter.title}</h3>
+                        <button class="btn-secondary btn btn-small" onclick="downloadLetter(${index})">📥 Pobierz PDF</button>
+                        <button class="btn-secondary btn btn-small" onclick="copyLetter(${index})">📋 Kopiuj</button>
+                        <button class="btn-secondary btn btn-small" onclick="editDate(${index})">📅 Zmień datę</button>
+                    </div>
+                    <div class="letter-preview">
+                        ${letter.content}
+                    </div>
+                `;
+                container.appendChild(letterDiv);
+            });
+
+            window.generatedLetters = letters;
+        }
+
+        function displayMultipleLetters(letters) {
+            const container = document.getElementById('generatedLetters');
+            container.innerHTML = '';
+
+            if (letters.length > 1) {
+                // Informacja o wielu listach
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'multiple-letters-info';
+                infoDiv.innerHTML = `
+                    <h3>📄 Zbieg Komorniczy - Wygenerowano ${letters.length} listów</h3>
+                    <p>Każdy komornik otrzyma osobny list z informacją o pozostałych komornikach w sprawie.</p>
+                `;
+                container.appendChild(infoDiv);
+
+                // Sekcja pobierania
+                const downloadDiv = document.createElement('div');
+                downloadDiv.className = 'download-section';
+                downloadDiv.innerHTML = `
+                    <h4>📥 Pobieranie listów:</h4>
+                    <div style="margin-bottom: 15px;">
+                        <strong>Bieżący list:</strong><br>
+                        <button class="btn btn-small" onclick="downloadCurrentLetter('doc')">📄 DOC</button>
+                        <button class="btn btn-small" onclick="downloadCurrentLetter('pdf')">📃 PDF</button>
+                    </div>
+                    <div>
+                        <strong>Wszystkie listy (${letters.length}):</strong><br>
+                        <button class="btn btn-small" onclick="downloadAllLetters('doc', this)">📄 Wszystkie DOC</button>
+                        <button class="btn btn-small" onclick="downloadAllLetters('pdf', this)">📃 Wszystkie PDF</button>
+                    </div>
+                `;
+                container.appendChild(downloadDiv);
+
+                // Nawigacja
+                const navDiv = document.createElement('div');
+                navDiv.className = 'letter-navigation';
+                navDiv.innerHTML = `
+                    <button class="nav-button" id="prevBtn" onclick="previousLetter()">← Poprzedni</button>
+                    <div class="letter-counter">
+                        <span id="currentLetterNum">1</span> z <span id="totalLetters">${letters.length}</span>
+                    </div>
+                    <button class="nav-button" id="nextBtn" onclick="nextLetter()">Następny →</button>
+                `;
+                container.appendChild(navDiv);
+            }
+
+            // Dodaj wszystkie listy (ukryte)
+            letters.forEach((letter, index) => {
+                const letterDiv = document.createElement('div');
+                letterDiv.className = 'letter-preview';
+                letterDiv.id = `letter-${index}`;
+                if (index === 0) letterDiv.classList.add('active');
+
+                letterDiv.innerHTML = `
+                    <div style="margin-bottom: 20px; text-align: center; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                        <h3>${letter.title}</h3>
+                        <p style="margin: 5px 0; color: #6c757d;">Adresat: ${letter.bailiff ? letter.bailiff.imieNazwisko : 'Nieznany'}</p>
+                        <div style="margin-top: 10px;">
+                            <button class="btn-secondary btn btn-small" onclick="downloadLetter(${index}, 'doc')">📄 DOC</button>
+                            <button class="btn-secondary btn btn-small" onclick="downloadLetter(${index}, 'pdf')">📃 PDF</button>
+                            <button class="btn-secondary btn btn-small" onclick="copyLetter(${index})">📋 Kopiuj treść</button>
+                            <button class="btn-secondary btn btn-small" onclick="editLetterDate(${index})">📅 Zmień datę</button>
+                        </div>
+                    </div>
+                    <div style="min-height: 600px;">
+                        ${letter.content}
+                    </div>
+                `;
+                container.appendChild(letterDiv);
+            });
+
+            updateNavigationButtons();
+            allGeneratedLetters = letters;
+        }
+
+        function previousLetter() {
+            if (currentLetterIndex > 0) {
+                document.getElementById(`letter-${currentLetterIndex}`).classList.remove('active');
+                currentLetterIndex--;
+                document.getElementById(`letter-${currentLetterIndex}`).classList.add('active');
+                updateNavigationButtons();
+            }
+        }
+
+        function nextLetter() {
+            if (currentLetterIndex < allGeneratedLetters.length - 1) {
+                document.getElementById(`letter-${currentLetterIndex}`).classList.remove('active');
+                currentLetterIndex++;
+                document.getElementById(`letter-${currentLetterIndex}`).classList.add('active');
+                updateNavigationButtons();
+            }
+        }
+
+        function updateNavigationButtons() {
+            const currentNumEl = document.getElementById('currentLetterNum');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+
+            if (currentNumEl) currentNumEl.textContent = currentLetterIndex + 1;
+            if (prevBtn) prevBtn.disabled = currentLetterIndex === 0;
+            if (nextBtn) nextBtn.disabled = currentLetterIndex === allGeneratedLetters.length - 1;
+        }
+
+        // Obsługa klawiszy strzałek
+        document.addEventListener('keydown', function (event) {
+            if (currentStep === 4 && allGeneratedLetters.length > 1) {
+                if (event.key === 'ArrowLeft') {
+                    event.preventDefault();
+                    previousLetter();
+                } else if (event.key === 'ArrowRight') {
+                    event.preventDefault();
+                    nextLetter();
+                }
+            }
+        });
+
+        function editDate(index) {
+            const newDate = prompt('Podaj nową datę (DD.MM.RRRR):', new Date().toLocaleDateString('pl-PL'));
+            if (newDate) {
+                const letter = window.generatedLetters[index];
+                letter.content = letter.content.replace(/Łódź, \d{1,2}\.\d{1,2}\.\d{4}/, `Łódź, ${newDate}`);
+                displayLetters(window.generatedLetters);
+            }
+        }
+
+        function editLetterDate(index) {
+            const newDate = prompt('Podaj nową datę (DD.MM.RRRR):', new Date().toLocaleDateString('pl-PL'));
+            if (newDate && newDate.trim() !== '') {
+                const letter = allGeneratedLetters[index];
+
+                // Zaktualizuj datę w różnych formatach które mogą występować w dokumencie
+                const datePatterns = [
+                    /Łódź,\s*dnia\s*\d{1,2}[^\d]*\d{4}\s*r\./g,
+                    /Łódź,\s*\d{1,2}\.\d{1,2}\.\d{4}/g,
+                    /Łódź,\s*dnia\s*\d{1,2}\.\d{1,2}\.\d{4}\s*r\./g,
+                    /<div class="date">.*?<\/div>/g
+                ];
+
+                let updatedContent = letter.content;
+
+                // Zaktualizuj wszystkie możliwe formaty daty
+                datePatterns.forEach(pattern => {
+                    if (pattern.test(updatedContent)) {
+                        if (pattern.source.includes('class="date"')) {
+                            updatedContent = updatedContent.replace(pattern, `<div class="date">Łódź, dnia ${newDate} r.</div>`);
+                        } else {
+                            updatedContent = updatedContent.replace(pattern, `Łódź, dnia ${newDate} r.`);
+                        }
+                    }
+                });
+
+                // Jeśli nie znaleziono wzorców, spróbuj uniwersalnego
+                if (updatedContent === letter.content) {
+                    updatedContent = updatedContent.replace(/Łódź[^<\n]*/g, `Łódź, dnia ${newDate} r.`);
+                }
+
+                letter.content = updatedContent;
+                // Odśwież wyświetlany list
+                document.getElementById(`letter-${index}`).innerHTML = `
+                    <div style="margin-bottom: 20px; text-align: center; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                        <h3>${letter.title}</h3>
+                        <p style="margin: 5px 0; color: #6c757d;">Adresat: ${letter.bailiff ? letter.bailiff.imieNazwisko : 'Nieznany'}</p>
+                        <div style="margin-top: 10px;">
+                            <button class="btn-secondary btn btn-small" onclick="downloadLetter(${index}, 'doc')">📄 DOC</button>
+                            <button class="btn-secondary btn btn-small" onclick="downloadLetter(${index}, 'pdf')">📃 PDF</button>
+                            <button class="btn-secondary btn btn-small" onclick="copyLetter(${index})">📋 Kopiuj treść</button>
+                            <button class="btn-secondary btn btn-small" onclick="editLetterDate(${index})">📅 Zmień datę</button>
+                        </div>
+                    </div>
+                    <div style="min-height: 600px;">
+                        ${letter.content}
+                    </div>
+                `;
+            }
+        }
+
+        function downloadLetter(index, format = 'doc') {
+            const letter = allGeneratedLetters ? allGeneratedLetters[index] : window.generatedLetters[index];
+            const bailiffName = letter.bailiff ? letter.bailiff.imieNazwisko.replace(/[^a-zA-Z0-9]/g, '_') : 'List';
+
+            if (format === 'pdf') {
+                downloadLetterAsPdf(index);
+                return;
+            } else if (format === 'doc') {
+                downloadLetterAsDoc(index);
+                return;
+            }
+        }
+
+        async function downloadLetterAsPdf(index) {
+            const letter = allGeneratedLetters ? allGeneratedLetters[index] : window.generatedLetters[index];
+
+            // Debug informacje
+            console.log('downloadLetterAsPdf - index:', index);
+            console.log('downloadLetterAsPdf - letter:', letter);
+            console.log('downloadLetterAsPdf - allGeneratedLetters:', allGeneratedLetters);
+            console.log('downloadLetterAsPdf - window.generatedLetters:', window.generatedLetters);
+
+            if (!letter) {
+                alert('Nie znaleziono listu o podanym indeksie');
+                return;
+            }
+
+            const bailiffName = letter.bailiff ? letter.bailiff.imieNazwisko.replace(/[^a-zA-Z0-9]/g, '_') : 'List';
+            const fileName = `${bailiffName}_${letter.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+
+            try {
+                const response = await fetch('/download-pdf', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        html_content: letter.content,
+                        filename: fileName
+                    })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+
+                    // Pobierz plik PDF
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } else {
+                    const error = await response.json();
+                    alert(`Błąd pobierania PDF: ${error.error}`);
+                }
+            } catch (error) {
+                console.error('Błąd pobierania PDF:', error);
+                alert('Nie udało się pobrać pliku PDF. Sprawdź połączenie z serwerem.');
+            }
+        }
+
+        async function downloadLetterAsDoc(index) {
+            const letter = allGeneratedLetters ? allGeneratedLetters[index] : window.generatedLetters[index];
+            const bailiffName = letter.bailiff ? letter.bailiff.imieNazwisko.replace(/[^a-zA-Z0-9]/g, '_') : 'List';
+            const fileName = `${bailiffName}_${letter.title.replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
+
+            try {
+                const response = await fetch('/download-doc', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        html_content: letter.content,
+                        filename: fileName
+                    })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } else {
+                    const error = await response.json();
+                    alert(`Błąd pobierania DOC: ${error.error}`);
+                }
+            } catch (error) {
+                console.error('Błąd pobierania DOC:', error);
+                alert('Nie udało się pobrać pliku DOC. Sprawdź połączenie z serwerem.');
+            }
+        }
+
+        function copyLetter(index) {
+            const letter = allGeneratedLetters ? allGeneratedLetters[index] : window.generatedLetters[index];
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = letter.content;
+            const textContent = tempDiv.textContent || tempDiv.innerText;
+
+            navigator.clipboard.writeText(textContent).then(() => {
+                alert('Treść listu została skopiowana do schowka!');
+            });
+        }
+
+        function downloadAllLetters(format = 'doc', buttonElement = null) {
+            const letters = allGeneratedLetters || window.generatedLetters;
+            if (letters) {
+                // Znajdź przycisk jeśli nie został przekazany
+                if (!buttonElement) {
+                    buttonElement = event ? event.target : null;
+                }
+
+                letters.forEach((letter, index) => {
+                    setTimeout(() => downloadLetter(index, format), index * 2000); // Zwiększam opóźnienie
+                });
+
+                // Pokaż komunikat o pobieraniu
+                if (buttonElement) {
+                    const originalText = buttonElement.textContent;
+                    const fileType = format === 'pdf' ? 'PDF' : (format === 'doc' ? 'DOC' : 'HTML');
+                    buttonElement.textContent = `Pobieranie ${letters.length} plików ${fileType}...`;
+                    buttonElement.disabled = true;
+
+                    setTimeout(() => {
+                        buttonElement.textContent = originalText;
+                        buttonElement.disabled = false;
+                        alert(`Pobrano ${letters.length} listów w formacie ${fileType}!`);
+                    }, letters.length * 2000); // Zwiększam czas oczekiwania
+                }
+            }
+        }
+
+        function downloadCurrentLetter(format = 'html') {
+            if (allGeneratedLetters && allGeneratedLetters[currentLetterIndex]) {
+                downloadLetter(currentLetterIndex, format);
+            }
+        }
+
+        function resetSystem() {
+            currentStep = 1;
+            selectedOption = null;
+            fileData = null;
+            additionalBailiffsCount = 0;
+            bailiffsList = [];
+            currentLetterIndex = 0;
+            allGeneratedLetters = [];
+
+            document.getElementById('company').value = '';
+            document.getElementById('fileName').textContent = '';
+            document.getElementById('fileInput').value = '';
+            document.getElementById('additionalBailiffs').innerHTML = '';
+            document.getElementById('bailiffSummary').innerHTML = '';
+            document.querySelectorAll('input').forEach(input => {
+                if (input.type !== 'radio' && input.type !== 'checkbox') {
+                    input.value = '';
+                } else {
+                    input.checked = false;
+                }
+            });
+
+            document.querySelectorAll('.radio-option').forEach(opt => opt.classList.remove('selected'));
+
+            goToStep(1);
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const today = new Date().toISOString().split('T')[0];
+            document.querySelectorAll('input[type="date"]').forEach(input => {
+                if (!input.value) {
+                    input.value = today;
+                }
+            });
+
+            // Inicjalizuj bazę danych przy ładowaniu strony
+            initializeDatabase();
+            loadBailiffsFromDatabase();
+        });
+
+        // Funkcje obsługi bazy danych
+        let employeeData = null;
+        let bailiffConflictInfo = null;
+
+        async function initializeDatabase() {
+            try {
+                const response = await fetch('/api/initialize-database', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    console.log('📊 Baza danych zainicjalizowana:', result.message);
+                } else {
+                    console.log('ℹ️ Baza danych:', result.error);
+                }
+            } catch (error) {
+                console.log('⚠️ Problem z inicjalizacją bazy danych:', error);
+            }
+        }
+
+        async function searchEmployeeInDatabase(pesel) {
+            try {
+                showEmployeeSearchStatus('Wyszukuję dane pracownika...');
+
+                const response = await fetch(`/api/employee/${pesel}`);
+                const result = await response.json();
+
+                if (response.ok && result.found) {
+                    employeeData = result.employee;
+                    bailiffConflictInfo = result.bailiff_conflict;
+
+                    // Uzupełnij brakujące dane pracownika
+                    if (employeeData) {
+                        updateEmployeeFields(employeeData);
+                        showEmployeeSearchStatus(`✅ Znaleziono pracownika: ${employeeData.imie} ${employeeData.nazwisko} (${employeeData.spolka})`, 'success');
+
+                        // Sprawdź zbieg komorniczy
+                        if (bailiffConflictInfo.is_conflict) {
+                            showBailiffConflictWarning(bailiffConflictInfo);
+                        }
+
+                        // Automatyczne wykrywanie scenariusza
+                        await autoDetectScenario(pesel);
+                    }
+                } else {
+                    showEmployeeSearchStatus('⚠️ Pracownik nie został znaleziony w bazie danych', 'warning');
+                }
+            } catch (error) {
+                showEmployeeSearchStatus('❌ Błąd wyszukiwania w bazie danych', 'error');
+                console.error('Błąd wyszukiwania pracownika:', error);
+            }
+        }
+
+        function updateEmployeeFields(employee) {
+            // Uzupełnij nazwisko pracownika jeśli brakuje
+            const currentName = document.getElementById('editDebtorName').value;
+            if (!currentName || currentName.trim() === '') {
+                document.getElementById('editDebtorName').value = `${employee.imie} ${employee.nazwisko}`;
+                document.getElementById('debtorName').textContent = `${employee.imie} ${employee.nazwisko}`;
+            }
+
+            // Uzupełnij numer rachunku jeśli brakuje
+            const currentAccount = document.getElementById('editBankAccount').value;
+            if (!currentAccount || currentAccount.trim() === '') {
+                document.getElementById('editBankAccount').value = employee.numer_rachunku || '';
+                document.getElementById('bankAccount').textContent = employee.numer_rachunku || '';
+            }
+        }
+
+        async function autoDetectScenario(pesel) {
+            try {
+                const response = await fetch('/api/auto-detect-scenario', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pesel: pesel })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    const scenario = result.scenario;
+                    showAutoDetectionResult(scenario, result.reason);
+
+                    // Opcjonalnie - automatyczne wybieranie scenariusza
+                    // selectOption(scenario);
+                }
+            } catch (error) {
+                console.error('Błąd automatycznego wykrywania scenariusza:', error);
+            }
+        }
+
+        function showEmployeeSearchStatus(message, type = 'info') {
+            // Usuń poprzednie powiadomienia
+            const existingNotifications = document.querySelectorAll('.employee-search-notification');
+            existingNotifications.forEach(n => n.remove());
+
+            // Utwórz nowe powiadomienie
+            const notification = document.createElement('div');
+            notification.className = 'employee-search-notification';
+            notification.style.cssText = `
+                position: fixed;
+                top: 80px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                z-index: 1000;
+                max-width: 400px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                animation: slideIn 0.3s ease-out;
+            `;
+
+            // Kolory w zależności od typu
+            const colors = {
+                'info': '#2a5298',
+                'success': '#28a745',
+                'warning': '#ffc107',
+                'error': '#dc3545'
+            };
+
+            notification.style.background = colors[type] || colors.info;
+            notification.textContent = message;
+
+            document.body.appendChild(notification);
+
+            // Automatyczne usunięcie po 5 sekundach
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        function showBailiffConflictWarning(conflictInfo) {
+            const message = `🚨 UWAGA: Wykryto ZBIEG KOMORNICZY!\n\nPracownik ma już ${conflictInfo.active_proceedings_count} aktywnych postępowań komorniczych.\n\nCzy chcesz automatycznie przejść do opcji "ZBIEG KOMORNICZY"?`;
+
+            if (confirm(message)) {
+                selectOption(4); // Automatyczne wybieranie opcji 4 - Zbieg komorniczy
+                populateZbiegWithExistingData(conflictInfo.proceedings);
+            }
+        }
+
+        function showAutoDetectionResult(scenario, reason) {
+            const scenarioNames = {
+                1: "Osoba NIE PRACUJE",
+                2: "Błędne pismo (wynagrodzenie zamiast zajęcia)",
+                3: "Osoba PRACUJE - zajęcie wierzytelności",
+                4: "ZBIEG KOMORNICZY"
+            };
+
+            const message = `🤖 Automatyczne wykrywanie:\n\nZalecany scenariusz: ${scenarioNames[scenario]}\n\nPowód: ${reason}\n\nCzy chcesz automatycznie wybrać ten scenariusz?`;
+
+            if (confirm(message)) {
+                selectOption(scenario);
+            }
+        }
+
+        function populateZbiegWithExistingData(proceedings) {
+            // Uzupełnij dane z istniejących postępowań do formularza zbiegu
+            if (proceedings && proceedings.length > 0) {
+                const activeProceedings = proceedings.filter(p => p.status === 'aktywne');
+
+                // Dodaj wszystkie istniejące postępowania jako dodatkowych komorników
+                activeProceedings.forEach((proceeding, index) => {
+                    addBailiff();
+                    const entryNumber = additionalBailiffsCount;
+
+                    // Uzupełnij dane (poprawne mapowanie pól)
+                    document.querySelector(`input[name="additionalBailiffName${entryNumber}"]`).value = proceeding.bailiff_details.imie_nazwisko;
+                    document.querySelector(`input[name="additionalBailiffCase${entryNumber}"]`).value = proceeding.sygnatura_sprawy;
+                    document.querySelector(`input[name="additionalBailiffAddress${entryNumber}"]`).value = proceeding.bailiff_details.adres;
+                    document.querySelector(`input[name="additionalBailiffCity${entryNumber}"]`).value = proceeding.bailiff_details.miasto;
+                    document.querySelector(`input[name="additionalBailiffDate${entryNumber}"]`).value = proceeding.data_wplywu;
+                });
+
+                updateBailiffSummary();
+                showEmployeeSearchStatus(`✅ Załadowano ${activeProceedings.length} istniejących postępowań komorniczych`, 'success');
+            }
+        }
+
+        // CSS dla animacji
+        const animationCSS = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        `;
+
+        // Dodaj CSS do strony
+        const style = document.createElement('style');
+        style.textContent = animationCSS;
+        document.head.appendChild(style);
+    </script>
+</body>
+
+</html>

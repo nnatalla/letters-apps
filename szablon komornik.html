@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pismo do Komornika</title>
+    <style>
+        body {
+            font-family: "Times New Roman", serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            background-color: white;
+        }
+        .wrapper {
+            width: 100%; /* Ustawienie szerokości na 100% okna */
+            padding: 2.5em 5em; /* Marginesy dopasowujące się do wielkości ekranu */
+            box-sizing: border-box;
+            background-color: white;
+        }
+        .sender {
+            margin-bottom: 80px;
+        }
+        .recipient {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+        .date {
+            text-align: right;
+            margin-bottom: 40px;
+        }
+        .title {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 40px;
+            text-transform: uppercase;
+        }
+        .content {
+            text-align: justify;
+            margin-bottom: 40px;
+        }
+        .closing {
+            margin-top: 40px;
+        }
+        .signature {
+            margin-top: 60px;
+            font-weight: bold;
+        }
+        /* Style dla wydruku */
+        @media print {
+            body {
+                background: none;
+                margin: 0;
+                padding: 0;
+            }
+            .wrapper {
+                width: 210mm;
+                height: 297mm;
+                margin: 0;
+                box-shadow: none;
+                padding: 2cm;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="date">Łódź, dnia 26 sierpnia 2025 r.</div>
+        
+        <div class="sender">
+            <span class="bold">Firma Przykladowa</span><br>
+            ul. Przykladowa 123<br>
+            123456789 / firma@przykladowa.pl
+        </div>
+
+        <div class="recipient">
+            Komornik Sądowy przy<br>
+            <span class="bold">Sąd Rejonowy w Łodzi</span><br>
+            Jan Kowalski<br>
+            ul. Piotrkowska 123
+        </div>
+
+        <div class="title">INFORMACJA O ZAKOŃCZENIU WSPÓŁPRACY Z FIRMĄ</div>
+
+        <div class="content">
+            <p>Szanowny Panie Komorniku,</p>
+            <p>Informuję, iż Anna Nowak PESEL: 85010112345, zakończyła współpracę z naszą firmą.</p>
+        </div>
+
+        <div class="closing">
+            Z poważaniem,
+        </div>
+        
+        <div class="signature">
+            ...............................................<br>
+            [Podpis nadawcy]
+        </div>
+    </div>
+</body>
+</html>
