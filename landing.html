@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PismaAI — Odpowiedz na pismo urzędowe w 60 sekund</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0f1e;
+  --bg2:#0e1428;
+  --bg3:#131929;
+  --blue:#3b82f6;
+  --blue2:#60a5fa;
+  --blue3:#1d4ed8;
+  --text:#f0f4ff;
+  --text2:#94a3b8;
+  --text3:#64748b;
+  --border:rgba(59,130,246,0.15);
+  --border2:rgba(255,255,255,0.06);
+  --glow:rgba(59,130,246,0.3);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;overflow-x:hidden;line-height:1.6}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:0 5%;background:rgba(10,15,30,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;height:64px;transition:all .3s}
+.nav-logo{font-family:'Sora',sans-serif;font-weight:800;font-size:1.4rem;color:var(--text);display:flex;align-items:center;gap:8px}
+.nav-logo span{background:linear-gradient(135deg,#3b82f6,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-links{display:flex;align-items:center;gap:2rem}
+.nav-links a{color:var(--text2);text-decoration:none;font-size:.9rem;transition:color .2s}
+.nav-links a:hover{color:var(--text)}
+.nav-cta{background:var(--blue);color:#fff;padding:9px 22px;border-radius:8px;font-size:.9rem;font-weight:600;text-decoration:none;transition:all .2s;border:none;cursor:pointer}
+.nav-cta:hover{background:#2563eb;transform:translateY(-1px);box-shadow:0 4px 20px var(--glow)}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px}
+.hamburger span{display:block;width:24px;height:2px;background:var(--text2);border-radius:2px;transition:all .3s}
+
+/* HERO */
+.hero{min-height:100vh;display:flex;align-items:center;padding:100px 5% 60px;position:relative;overflow:hidden}
+.hero-mesh{position:absolute;inset:0;z-index:0;pointer-events:none}
+.hero-mesh::before{content:'';position:absolute;top:-20%;left:-10%;width:600px;height:600px;background:radial-gradient(ellipse,rgba(59,130,246,0.15) 0%,transparent 70%);border-radius:50%}
+.hero-mesh::after{content:'';position:absolute;bottom:-10%;right:-5%;width:500px;height:500px;background:radial-gradient(ellipse,rgba(167,139,250,0.1) 0%,transparent 70%);border-radius:50%}
+.hero-inner{max-width:1200px;margin:0 auto;width:100%;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;position:relative;z-index:1}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:100px;padding:6px 16px;font-size:.8rem;color:var(--blue2);margin-bottom:24px;width:fit-content}
+.hero-badge::before{content:'';width:6px;height:6px;background:#22c55e;border-radius:50%;animation:pulse-dot 2s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
+h1{font-family:'Sora',sans-serif;font-size:clamp(2.2rem,4.5vw,3.4rem);font-weight:800;line-height:1.15;margin-bottom:20px}
+h1 .accent{background:linear-gradient(135deg,#3b82f6 0%,#a78bfa 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-sub{font-size:1.1rem;color:var(--text2);line-height:1.7;margin-bottom:36px;max-width:480px}
+.hero-actions{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:40px}
+.btn-primary{background:var(--blue);color:#fff;padding:14px 28px;border-radius:10px;font-weight:600;font-size:1rem;text-decoration:none;border:none;cursor:pointer;transition:all .25s;display:inline-flex;align-items:center;gap:8px}
+.btn-primary:hover{background:#2563eb;transform:translateY(-2px);box-shadow:0 8px 30px var(--glow)}
+.btn-ghost{background:transparent;color:var(--text);padding:14px 28px;border-radius:10px;font-weight:600;font-size:1rem;text-decoration:none;border:1px solid var(--border2);cursor:pointer;transition:all .25s;display:inline-flex;align-items:center;gap:8px}
+.btn-ghost:hover{background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.15)}
+.social-proof{display:flex;align-items:center;gap:12px;font-size:.875rem;color:var(--text2)}
+.avatars{display:flex}
+.avatars span{width:28px;height:28px;border-radius:50%;border:2px solid var(--bg);margin-left:-8px;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:600}
+.avatars span:first-child{margin-left:0}
+.count-up{color:var(--text);font-weight:600}
+
+/* MOCKUP */
+.hero-mockup{position:relative}
+.mockup-window{background:var(--bg3);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 0 60px rgba(59,130,246,0.12),0 30px 60px rgba(0,0,0,0.4);transform:perspective(1000px) rotateY(-8deg) rotateX(3deg);transition:transform .5s}
+.mockup-window:hover{transform:perspective(1000px) rotateY(-4deg) rotateX(1deg)}
+.mockup-bar{background:rgba(255,255,255,0.04);padding:10px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border2)}
+.mockup-dots span{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
+.mockup-dots span:nth-child(1){background:#ff5f57}
+.mockup-dots span:nth-child(2){background:#febc2e}
+.mockup-dots span:nth-child(3){background:#28c840}
+.mockup-url{background:rgba(255,255,255,0.06);border-radius:6px;padding:4px 12px;font-size:.75rem;color:var(--text3);flex:1;text-align:center}
+.mockup-body{padding:20px}
+.mock-step{background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:14px;margin-bottom:12px;font-size:.8rem}
+.mock-step-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;color:var(--blue2);font-weight:600;font-size:.75rem}
+.mock-badge{background:rgba(59,130,246,0.2);color:var(--blue2);padding:2px 8px;border-radius:100px;font-size:.65rem;font-weight:700}
+.mock-field{background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:.72rem;color:var(--text2);display:flex;justify-content:space-between;align-items:center}
+.mock-field span{color:var(--text);font-weight:500}
+.mock-generate{background:linear-gradient(135deg,#3b82f6,#6366f1);border:none;border-radius:8px;padding:10px;width:100%;color:#fff;font-weight:700;font-size:.8rem;cursor:pointer;letter-spacing:.3px}
+.mockup-glow{position:absolute;bottom:-30px;left:50%;transform:translateX(-50%);width:60%;height:60px;background:radial-gradient(ellipse,rgba(59,130,246,0.4) 0%,transparent 70%);pointer-events:none}
+
+/* SECTIONS */
+section{padding:100px 5%}
+.section-inner{max-width:1200px;margin:0 auto}
+.section-tag{display:inline-block;background:rgba(59,130,246,0.1);color:var(--blue2);border:1px solid rgba(59,130,246,0.2);border-radius:100px;padding:5px 14px;font-size:.78rem;font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:16px}
+h2{font-family:'Sora',sans-serif;font-size:clamp(1.8rem,3vw,2.6rem);font-weight:700;line-height:1.2;margin-bottom:16px}
+.section-sub{color:var(--text2);font-size:1.05rem;max-width:560px;margin:0 auto 60px;text-align:center}
+
+/* BEFORE/AFTER */
+.before-after{background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);text-align:center}
+.ba-grid{display:grid;grid-template-columns:1fr 80px 1fr;gap:0;align-items:stretch;max-width:800px;margin:0 auto}
+.ba-col{background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:32px;text-align:left}
+.ba-col.before{border-color:rgba(239,68,68,0.2)}
+.ba-col.after{border-color:rgba(34,197,94,0.2)}
+.ba-label{font-size:.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.ba-label.before-label{color:#f87171}
+.ba-label.after-label{color:#4ade80}
+.ba-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;font-size:.9rem}
+.ba-icon{font-size:1rem;flex-shrink:0;margin-top:1px}
+.ba-divider{display:flex;align-items:center;justify-content:center}
+.ba-arrow{width:48px;height:48px;background:linear-gradient(135deg,var(--blue),#6366f1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;box-shadow:0 0 20px var(--glow)}
+
+/* HOW IT WORKS */
+.how{background:var(--bg2)}
+.steps-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;position:relative}
+.steps-grid::before{content:'';position:absolute;top:44px;left:12.5%;right:12.5%;height:2px;background:linear-gradient(90deg,var(--blue),#6366f1,var(--blue));opacity:.3}
+.step-card{text-align:center;padding:0 20px;position:relative}
+.step-num{width:88px;height:88px;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;position:relative;z-index:1}
+.step-num::before{content:'';position:absolute;inset:-2px;border-radius:50%;background:linear-gradient(135deg,var(--blue),#6366f1);z-index:-1;opacity:.5}
+.step-num::after{content:'';position:absolute;inset:2px;border-radius:50%;background:var(--bg2);z-index:-1}
+.step-n{position:absolute;top:-6px;right:-6px;width:22px;height:22px;background:var(--blue);border-radius:50%;font-size:.65rem;font-weight:800;display:flex;align-items:center;justify-content:center}
+.step-title{font-family:'Sora',sans-serif;font-weight:700;font-size:1rem;margin-bottom:8px}
+.step-desc{color:var(--text2);font-size:.85rem;line-height:1.6}
+
+/* DOCUMENT TYPES */
+.types{background:var(--bg);text-align:center}
+.types-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:700px;margin:0 auto 20px}
+.type-card{background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:24px 20px;transition:all .25s;cursor:default}
+.type-card:hover{border-color:rgba(59,130,246,0.4);background:rgba(59,130,246,0.06);transform:translateY(-3px)}
+.type-icon{font-size:2rem;margin-bottom:10px;display:block}
+.type-name{font-weight:600;font-size:.9rem;margin-bottom:4px}
+.type-desc{color:var(--text3);font-size:.75rem}
+.types-more{color:var(--text3);font-size:.9rem;margin-top:10px}
+
+/* PRICING */
+.pricing{background:var(--bg2);text-align:center}
+.pricing-toggle{display:inline-flex;align-items:center;gap:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:100px;padding:6px 8px;margin-bottom:50px;font-size:.85rem}
+.toggle-opt{padding:6px 18px;border-radius:100px;cursor:pointer;transition:all .2s;color:var(--text2)}
+.toggle-opt.active{background:var(--blue);color:#fff;font-weight:600}
+.toggle-badge{background:rgba(34,197,94,0.2);color:#4ade80;padding:3px 10px;border-radius:100px;font-size:.72rem;font-weight:700}
+.plans-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:1000px;margin:0 auto}
+.plan-card{background:var(--bg3);border:1px solid var(--border2);border-radius:20px;padding:36px 28px;text-align:left;position:relative;transition:all .3s}
+.plan-card:hover{transform:translateY(-4px)}
+.plan-card.popular{border-color:var(--blue);background:rgba(59,130,246,0.06);box-shadow:0 0 40px rgba(59,130,246,0.15)}
+.plan-pop-badge{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--blue),#6366f1);color:#fff;padding:5px 18px;border-radius:100px;font-size:.72rem;font-weight:800;letter-spacing:.5px;white-space:nowrap}
+.plan-name{font-family:'Sora',sans-serif;font-weight:800;font-size:1.1rem;margin-bottom:6px;color:var(--text2)}
+.plan-price{display:flex;align-items:baseline;gap:4px;margin-bottom:4px}
+.plan-price .amount{font-family:'Sora',sans-serif;font-size:2.6rem;font-weight:800}
+.plan-price .period{color:var(--text3);font-size:.9rem}
+.plan-limit{color:var(--text3);font-size:.82rem;margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid var(--border2)}
+.plan-features{list-style:none;margin-bottom:28px}
+.plan-features li{display:flex;align-items:center;gap:8px;font-size:.875rem;color:var(--text2);margin-bottom:10px}
+.plan-features li::before{content:'✓';color:#4ade80;font-weight:700;flex-shrink:0}
+.plan-btn{width:100%;padding:13px;border-radius:10px;font-weight:700;font-size:.95rem;cursor:pointer;transition:all .25s;text-decoration:none;display:block;text-align:center;border:none}
+.plan-btn.outline{background:transparent;border:1px solid var(--border);color:var(--text);border-color:rgba(255,255,255,0.1)}
+.plan-btn.outline:hover{background:rgba(255,255,255,0.05)}
+.plan-btn.filled{background:linear-gradient(135deg,var(--blue),#6366f1);color:#fff}
+.plan-btn.filled:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 6px 25px var(--glow)}
+
+/* TESTIMONIALS */
+.testimonials{background:var(--bg);text-align:center}
+.testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.testi-card{background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:28px;text-align:left;position:relative}
+.testi-card::before{content:'"';font-family:'Sora',sans-serif;font-size:4rem;color:var(--blue);opacity:.2;position:absolute;top:10px;left:20px;line-height:1}
+.testi-stars{color:#fbbf24;font-size:.85rem;margin-bottom:14px}
+.testi-text{color:var(--text2);font-size:.9rem;line-height:1.7;margin-bottom:20px;position:relative;z-index:1}
+.testi-author{display:flex;align-items:center;gap:12px}
+.testi-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;flex-shrink:0}
+.testi-name{font-weight:600;font-size:.875rem}
+.testi-role{color:var(--text3);font-size:.75rem}
+
+/* FAQ */
+.faq{background:var(--bg2)}
+.faq-list{max-width:700px;margin:0 auto}
+.faq-item{border-bottom:1px solid var(--border2)}
+.faq-q{width:100%;background:none;border:none;color:var(--text);text-align:left;padding:20px 0;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:.95rem;font-weight:500;gap:16px}
+.faq-icon{width:24px;height:24px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.8rem;transition:all .3s;color:var(--text2)}
+.faq-item.open .faq-icon{background:var(--blue);border-color:var(--blue);color:#fff;transform:rotate(45deg)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .35s ease,padding .3s;color:var(--text2);font-size:.9rem;line-height:1.7}
+.faq-item.open .faq-a{max-height:200px;padding-bottom:18px}
+
+/* FINAL CTA */
+.final-cta{background:var(--bg);text-align:center}
+.cta-box{background:linear-gradient(135deg,rgba(59,130,246,0.1) 0%,rgba(99,102,241,0.1) 100%);border:1px solid rgba(59,130,246,0.25);border-radius:24px;padding:70px 40px;position:relative;overflow:hidden;max-width:800px;margin:0 auto}
+.cta-box::before{content:'';position:absolute;top:-50%;left:-20%;width:300px;height:300px;background:radial-gradient(ellipse,rgba(59,130,246,0.15) 0%,transparent 70%);pointer-events:none}
+.cta-box::after{content:'';position:absolute;bottom:-50%;right:-10%;width:250px;height:250px;background:radial-gradient(ellipse,rgba(167,139,250,0.12) 0%,transparent 70%);pointer-events:none}
+.cta-box h2{position:relative;z-index:1}
+.cta-note{color:var(--text3);font-size:.82rem;margin-top:14px;position:relative;z-index:1}
+
+/* FOOTER */
+footer{background:var(--bg2);border-top:1px solid var(--border2);padding:50px 5% 30px}
+.footer-inner{max-width:1200px;margin:0 auto}
+.footer-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:40px;flex-wrap:wrap;gap:30px}
+.footer-logo{font-family:'Sora',sans-serif;font-weight:800;font-size:1.3rem;margin-bottom:10px}
+.footer-logo span{background:linear-gradient(135deg,#3b82f6,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.footer-tagline{color:var(--text3);font-size:.85rem;max-width:240px}
+.footer-links{display:flex;gap:40px;flex-wrap:wrap}
+.footer-col h4{font-size:.8rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin-bottom:14px}
+.footer-col a{display:block;color:var(--text2);text-decoration:none;font-size:.875rem;margin-bottom:10px;transition:color .2s}
+.footer-col a:hover{color:var(--text)}
+.footer-bottom{border-top:1px solid var(--border2);padding-top:24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.footer-copy{color:var(--text3);font-size:.8rem}
+
+/* ANIMATIONS */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .6s ease,transform .6s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+.reveal-delay-1{transition-delay:.1s}
+.reveal-delay-2{transition-delay:.2s}
+.reveal-delay-3{transition-delay:.3s}
+.reveal-delay-4{transition-delay:.4s}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .hero-inner{grid-template-columns:1fr;text-align:center}
+  .hero-mockup{display:none}
+  .hero-badge,.hero-sub{margin-left:auto;margin-right:auto}
+  .hero-actions{justify-content:center}
+  .social-proof{justify-content:center}
+  .ba-grid{grid-template-columns:1fr;max-width:400px}
+  .ba-divider{padding:12px 0;transform:rotate(90deg)}
+  .steps-grid{grid-template-columns:1fr 1fr;gap:30px}
+  .steps-grid::before{display:none}
+  .plans-grid,.testi-grid{grid-template-columns:1fr}
+  .plan-card.popular{order:-1}
+  .types-grid{grid-template-columns:repeat(2,1fr)}
+  .footer-top{flex-direction:column}
+  .nav-links{display:none}
+  .hamburger{display:flex}
+}
+@media(max-width:500px){
+  section{padding:70px 5%}
+  h2{font-size:1.7rem}
+  .steps-grid{grid-template-columns:1fr}
+  .types-grid{grid-template-columns:repeat(2,1fr)}
+}
+
+/* DEMO LIGHTBOX */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;align-items:center;justify-content:center;padding:20px}
+.lightbox.open{display:flex}
+.lightbox-inner{background:var(--bg3);border:1px solid var(--border);border-radius:16px;padding:30px;max-width:700px;width:100%;position:relative;text-align:center}
+.lightbox-close{position:absolute;top:12px;right:16px;background:none;border:none;color:var(--text2);font-size:1.5rem;cursor:pointer;transition:color .2s}
+.lightbox-close:hover{color:var(--text)}
+.demo-steps{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:20px;text-align:left}
+.demo-step{background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.15);border-radius:12px;padding:16px}
+.demo-step-num{font-size:.7rem;font-weight:800;color:var(--blue2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
+.demo-step h4{font-size:.9rem;margin-bottom:4px}
+.demo-step p{color:var(--text2);font-size:.8rem;line-height:1.5}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="navbar">
+  <div class="nav-logo">📄 <span>PismaAI</span></div>
+  <div class="nav-links">
+    <a href="#jak-dziala">Jak to działa</a>
+    <a href="#cennik">Cennik</a>
+    <a href="#faq">FAQ</a>
+  </div>
+  <a href="/register" class="nav-cta">Zacznij za darmo →</a>
+  <button class="hamburger" onclick="toggleMenu()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-mesh"></div>
+  <div class="hero-inner">
+    <div class="hero-content">
+      <div class="hero-badge">✦ Technologia AI nowej generacji</div>
+      <h1>Koniec ze stresem od pism <span class="accent">urzędowych</span></h1>
+      <p class="hero-sub">Wgraj pismo. AI je przeczyta, rozpozna i napisze profesjonalną odpowiedź gotową do wysłania — w 60 sekund.</p>
+      <div class="hero-actions">
+        <a href="/register" class="btn-primary">Zacznij za darmo →</a>
+        <button class="btn-ghost" onclick="openDemo()">▶ Zobacz demo</button>
+      </div>
+      <div class="social-proof">
+        <div class="avatars">
+          <span style="background:#3b82f6">MK</span>
+          <span style="background:#8b5cf6">AW</span>
+          <span style="background:#10b981">JP</span>
+          <span style="background:#f59e0b">RN</span>
+        </div>
+        <span>Zaufało nam już <span class="count-up" id="counter">500</span>+ użytkowników</span>
+      </div>
+    </div>
+    <div class="hero-mockup">
+      <div class="mockup-window">
+        <div class="mockup-bar">
+          <div class="mockup-dots"><span></span><span></span><span></span></div>
+          <div class="mockup-url">pismaai.pl/app</div>
+        </div>
+        <div class="mockup-body">
+          <div class="mock-step">
+            <div class="mock-step-header">
+              <span class="mock-badge">⚖️ KOMORNICZE</span>
+              Rozpoznane dane · pewność 97%
+            </div>
+            <div class="mock-field">Komornik: <span>Jan Kowalski</span></div>
+            <div class="mock-field">Dłużnik: <span>Anna Nowak</span></div>
+            <div class="mock-field">Sygnatura: <span>Km 1234/24</span></div>
+          </div>
+          <div class="mock-step" style="background:rgba(99,102,241,0.08);border-color:rgba(99,102,241,0.2)">
+            <div class="mock-step-header" style="color:#a5b4fc">
+              📄 Generowanie odpowiedzi...
+            </div>
+            <div style="height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:75%;background:linear-gradient(90deg,#3b82f6,#6366f1);border-radius:3px;animation:progress 2s ease-in-out infinite"></div>
+            </div>
+          </div>
+          <button class="mock-generate">⬇ Pobierz odpowiedź (PDF/DOC)</button>
+        </div>
+      </div>
+      <div class="mockup-glow"></div>
+    </div>
+  </div>
+</section>
+
+<style>
+@keyframes progress{0%{width:20%}50%{width:85%}100%{width:20%}}
+</style>
+
+<!-- BEFORE / AFTER -->
+<section class="before-after reveal">
+  <div class="section-inner" style="text-align:center">
+    <div class="section-tag">Zmiana na lepsze</div>
+    <h2>Przed i po PismaAI</h2>
+    <p class="section-sub" style="margin-bottom:50px">Sprawdź jak diametralnie zmienia się praca z pismami</p>
+    <div class="ba-grid">
+      <div class="ba-col before">
+        <div class="ba-label before-label">❌ Bez PismaAI</div>
+        <div class="ba-item"><span class="ba-icon">⏰</span>Godziny czytania i analizowania pisma</div>
+        <div class="ba-item"><span class="ba-icon">😰</span>Stres i niepewność co odpowiedzieć</div>
+        <div class="ba-item"><span class="ba-icon">💸</span>Drogie porady prawnicze</div>
+        <div class="ba-item"><span class="ba-icon">📋</span>Ręczne wpisywanie każdego listu</div>
+        <div class="ba-item"><span class="ba-icon">🔍</span>Ryzyko błędów i pominiętych terminów</div>
+      </div>
+      <div class="ba-divider">
+        <div class="ba-arrow">→</div>
+      </div>
+      <div class="ba-col after">
+        <div class="ba-label after-label">✅ Z PismaAI</div>
+        <div class="ba-item"><span class="ba-icon">⚡</span>60 sekund do gotowej odpowiedzi</div>
+        <div class="ba-item"><span class="ba-icon">😌</span>Spokój — AI wie co zrobić</div>
+        <div class="ba-item"><span class="ba-icon">💰</span>Ułamek kosztu prawnika</div>
+        <div class="ba-item"><span class="ba-icon">✍️</span>Profesjonalny list jednym kliknięciem</div>
+        <div class="ba-item"><span class="ba-icon">🎯</span>Zero błędów, zero pominiętych danych</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="jak-dziala">
+  <div class="section-inner" style="text-align:center">
+    <div class="section-tag">Prosty proces</div>
+    <h2>Jak to działa?</h2>
+    <p class="section-sub">Cztery kroki do profesjonalnej odpowiedzi na każde pismo</p>
+    <div class="steps-grid">
+      <div class="step-card reveal">
+        <div class="step-num">
+          <span class="step-n">1</span>
+          📤
+        </div>
+        <div class="step-title">Wgraj pismo</div>
+        <div class="step-desc">Przeciągnij PDF lub zdjęcie pisma. Obsługujemy PDF, JPG, PNG.</div>
+      </div>
+      <div class="step-card reveal reveal-delay-1">
+        <div class="step-num">
+          <span class="step-n">2</span>
+          🤖
+        </div>
+        <div class="step-title">AI rozpoznaje</div>
+        <div class="step-desc">Sztuczna inteligencja identyfikuje typ pisma i wyciąga kluczowe dane.</div>
+      </div>
+      <div class="step-card reveal reveal-delay-2">
+        <div class="step-num">
+          <span class="step-n">3</span>
+          ✏️
+        </div>
+        <div class="step-title">Sprawdzasz dane</div>
+        <div class="step-desc">Weryfikujesz rozpoznane informacje i uzupełniasz szczegóły odpowiedzi.</div>
+      </div>
+      <div class="step-card reveal reveal-delay-3">
+        <div class="step-num">
+          <span class="step-n">4</span>
+          📥
+        </div>
+        <div class="step-title">Pobierasz list</div>
+        <div class="step-desc">Gotowy, profesjonalny list w formacie PDF lub DOC do natychmiastowego wysłania.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TYPES -->
+<section class="types">
+  <div class="section-inner">
+    <div style="text-align:center">
+      <div class="section-tag">Wszechstronność</div>
+      <h2>Obsługuje wszystkie rodzaje pism</h2>
+      <p class="section-sub">AI automatycznie rozpoznaje typ dokumentu i dopasowuje odpowiedź</p>
+    </div>
+    <div class="types-grid reveal">
+      <div class="type-card">
+        <span class="type-icon">⚖️</span>
+        <div class="type-name">Komornicze</div>
+        <div class="type-desc">Zajęcia, wierzytelności, zbieg komorniczy</div>
+      </div>
+      <div class="type-card">
+        <span class="type-icon">🏛️</span>
+        <div class="type-name">Urzędowe</div>
+        <div class="type-desc">ZUS, US, urząd gminy, MOPS</div>
+      </div>
+      <div class="type-card">
+        <span class="type-icon">🏫</span>
+        <div class="type-name">Szkolne</div>
+        <div class="type-desc">Wezwania, zebrania, oceny, sprawozdania</div>
+      </div>
+      <div class="type-card">
+        <span class="type-icon">🏦</span>
+        <div class="type-name">Bankowe</div>
+        <div class="type-desc">Windykacja, kredyty, reklamacje</div>
+      </div>
+      <div class="type-card">
+        <span class="type-icon">🏛️</span>
+        <div class="type-name">Sądowe</div>
+        <div class="type-desc">Wezwania, nakazy, wyroki</div>
+      </div>
+      <div class="type-card">
+        <span class="type-icon">👤</span>
+        <div class="type-name">Prywatne</div>
+        <div class="type-desc">Pisma od osób fizycznych</div>
+      </div>
+    </div>
+    <p class="types-more" style="text-align:center">+ i wiele innych typów rozpoznawanych automatycznie</p>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="cennik">
+  <div class="section-inner">
+    <div style="text-align:center">
+      <div class="section-tag">Cennik</div>
+      <h2>Prosty, przejrzysty cennik</h2>
+      <p class="section-sub">Bez ukrytych opłat. Anuluj w każdej chwili.</p>
+      <div class="pricing-toggle">
+        <div class="toggle-opt active" onclick="switchPricing('monthly',this)">Miesięcznie</div>
+        <div class="toggle-opt" onclick="switchPricing('yearly',this)">Rocznie <span class="toggle-badge">−20%</span></div>
+      </div>
+    </div>
+    <div class="plans-grid reveal">
+      <div class="plan-card">
+        <div class="plan-name">Plan S</div>
+        <div class="plan-price">
+          <div class="amount" id="price-s">99</div>
+          <div class="period">zł / mies.</div>
+        </div>
+        <div class="plan-limit">50 pism miesięcznie</div>
+        <ul class="plan-features">
+          <li>Wszystkie typy pism</li>
+          <li>Pobieranie PDF i DOC</li>
+          <li>Historia 3 miesięcy</li>
+          <li>Zarządzanie nadawcami</li>
+          <li>Wsparcie e-mail</li>
+        </ul>
+        <a href="/register" class="plan-btn outline">Zacznij za darmo</a>
+      </div>
+      <div class="plan-card popular">
+        <div class="plan-pop-badge">⭐ NAJPOPULARNIEJSZY</div>
+        <div class="plan-name">Plan M</div>
+        <div class="plan-price">
+          <div class="amount" id="price-m">199</div>
+          <div class="period">zł / mies.</div>
+        </div>
+        <div class="plan-limit">110 pism miesięcznie</div>
+        <ul class="plan-features">
+          <li>Wszystko z Planu S</li>
+          <li>Historia bez limitu</li>
+          <li>Priorytetowe przetwarzanie</li>
+          <li>Tryb zbieg komorniczy</li>
+          <li>Wsparcie priorytetowe</li>
+          <li>Instrukcje głosowe</li>
+        </ul>
+        <a href="/register" class="plan-btn filled">Wybierz Plan M →</a>
+      </div>
+      <div class="plan-card">
+        <div class="plan-name">Plan L</div>
+        <div class="plan-price">
+          <div class="amount" id="price-l">299</div>
+          <div class="period">zł / mies.</div>
+        </div>
+        <div class="plan-limit">200 pism miesięcznie</div>
+        <ul class="plan-features">
+          <li>Wszystko z Planu M</li>
+          <li>Wielu użytkowników</li>
+          <li>API dostęp</li>
+          <li>Własne szablony listów</li>
+          <li>Dedykowany opiekun</li>
+          <li>SLA 99.9% uptime</li>
+        </ul>
+        <a href="/register" class="plan-btn outline">Wybierz Plan L</a>
+      </div>
+    </div>
+    <p style="text-align:center;color:var(--text3);font-size:.83rem;margin-top:24px">
+      🔒 Bezpieczna płatność · Anuluj kiedy chcesz · Pierwsza faktura po 30 dniach
+    </p>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials">
+  <div class="section-inner">
+    <div style="text-align:center">
+      <div class="section-tag">Opinie</div>
+      <h2>Co mówią nasi użytkownicy</h2>
+      <p class="section-sub" style="margin-bottom:50px">Prawdziwe doświadczenia prawdziwych ludzi</p>
+    </div>
+    <div class="testi-grid reveal">
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <p class="testi-text">Prowadzę firmę transportową i co miesiąc dostaję pisma od komorników dotyczące kierowców. PismaAI oszczędza mi dosłownie kilka godzin tygodniowo. Odpowiedź gotowa zanim zdążę dopić kawę.</p>
+        <div class="testi-author">
+          <div class="testi-avatar" style="background:rgba(59,130,246,0.15);color:#60a5fa">MK</div>
+          <div>
+            <div class="testi-name">Marek Kowalczyk</div>
+            <div class="testi-role">Właściciel firmy transportowej, Łódź</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <p class="testi-text">Jako freelancer dostawałam różne pisma urzędowe i zawsze stresowałam się jak odpowiedzieć. Teraz wrzucam skan, AI rozpoznaje co to jest i pisze odpowiedź. Rewelacja, polecam każdemu.</p>
+        <div class="testi-author">
+          <div class="testi-avatar" style="background:rgba(167,139,250,0.15);color:#a78bfa">AW</div>
+          <div>
+            <div class="testi-name">Anna Wiśniewska</div>
+            <div class="testi-role">Grafik freelancer, Kraków</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★☆</div>
+        <p class="testi-text">Dostałem pismo z urzędu skarbowego i kompletnie nie wiedziałem co z tym zrobić. PismaAI w 30 sekund rozpoznało o co chodzi i napisało profesjonalne wyjaśnienie. Zaoszczędziłem 300 zł na poradzie prawnika.</p>
+        <div class="testi-author">
+          <div class="testi-avatar" style="background:rgba(16,185,129,0.15);color:#34d399">JP</div>
+          <div>
+            <div class="testi-name">Jakub Piotrowiak</div>
+            <div class="testi-role">Osoba prywatna, Warszawa</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq" id="faq">
+  <div class="section-inner">
+    <div style="text-align:center;margin-bottom:50px">
+      <div class="section-tag">FAQ</div>
+      <h2>Często zadawane pytania</h2>
+    </div>
+    <div class="faq-list reveal">
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Czy moje dane są bezpieczne?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Tak. Wszystkie przesłane dokumenty są szyfrowane (AES-256) i automatycznie usuwane z serwerów po 24 godzinach. Nie przechowujemy treści Twoich pism dłużej niż to konieczne do wygenerowania odpowiedzi. Dane są przetwarzane na serwerach w Unii Europejskiej zgodnie z RODO.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Jakie formaty plików obsługuje PismaAI?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Obsługujemy pliki PDF, JPG, JPEG i PNG do 10 MB. Pliki PDF mogą zawierać do 5 stron. Dla najlepszych rezultatów OCR zalecamy skany o rozdzielczości min. 300 DPI. Wygenerowane odpowiedzi możesz pobrać w formacie DOC (Word) lub PDF.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Czy mogę anulować subskrypcję w dowolnym momencie?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Tak, możesz anulować subskrypcję w każdej chwili z poziomu ustawień konta. Po anulowaniu zachowasz dostęp do końca opłaconego okresu. Nie pobieramy żadnych opłat za anulowanie, nie ma okresu wypowiedzenia.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Czy PismaAI działa z każdym typem pisma?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">AI obsługuje szeroką gamę pism: komornicze, urzędowe (ZUS, US, urzędy gmin), sądowe, szkolne, bankowe, od firm windykacyjnych, i wiele innych. Dla pism komorniczych mamy specjalną ścieżkę z obsługą zbiegu komorniczego. Nierozpoznane typy trafiają do trybu uniwersalnego gdzie AI samo dobiera odpowiedź.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Jak długo trwa przetwarzanie pisma?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Typowe pismo jest przetwarzane w 15-60 sekund. Czas zależy od jakości skanu, liczby stron i złożoności dokumentu. W planie M i L przetwarzanie ma priorytet, co gwarantuje szybszy czas reakcji nawet przy dużym obciążeniu systemu.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Czy potrzebuję wiedzy prawnej żeby korzystać z systemu?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Nie. PismaAI zostało zaprojektowane dla osób bez wykształcenia prawniczego. AI automatycznie rozpoznaje kontekst prawny i generuje właściwą odpowiedź. Zawsze jednak warto sprawdzić wygenerowany list przed wysłaniem — jeśli sprawa jest poważna, radzimy skonsultować się z prawnikiem.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="final-cta">
+  <div class="section-inner">
+    <div class="cta-box reveal">
+      <div class="section-tag" style="margin:0 auto 20px;display:block;width:fit-content">Zacznij teraz</div>
+      <h2 style="font-size:clamp(1.8rem,3.5vw,2.8rem);margin-bottom:14px">Pierwsze 3 pisma za darmo</h2>
+      <p style="color:var(--text2);font-size:1.05rem;margin-bottom:36px;position:relative;z-index:1">
+        Bez karty kredytowej. Bez zobowiązań. Zacznij w 60 sekund.
+      </p>
+      <a href="/register" class="btn-primary" style="font-size:1.05rem;padding:16px 36px;display:inline-flex;position:relative;z-index:1">
+        Utwórz darmowe konto →
+      </a>
+      <p class="cta-note">✓ Bez karty kredytowej &nbsp;·&nbsp; ✓ Anuluj kiedy chcesz &nbsp;·&nbsp; ✓ Dane bezpieczne (RODO)</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div>
+        <div class="footer-logo">📄 <span>PismaAI</span></div>
+        <p class="footer-tagline">Profesjonalne odpowiedzi na pisma urzędowe dzięki sztucznej inteligencji.</p>
+      </div>
+      <div class="footer-links">
+        <div class="footer-col">
+          <h4>Produkt</h4>
+          <a href="#jak-dziala">Jak to działa</a>
+          <a href="#cennik">Cennik</a>
+          <a href="/register">Zacznij za darmo</a>
+        </div>
+        <div class="footer-col">
+          <h4>Firma</h4>
+          <a href="#">O nas</a>
+          <a href="#">Kontakt</a>
+          <a href="#">Blog</a>
+        </div>
+        <div class="footer-col">
+          <h4>Prawne</h4>
+          <a href="#">Regulamin</a>
+          <a href="#">Polityka prywatności</a>
+          <a href="#">RODO</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2025 PismaAI. Wszelkie prawa zastrzeżone.</div>
+      <div class="footer-copy">🇵🇱 Produkt polski · Serwery w UE · RODO</div>
+    </div>
+  </div>
+</footer>
+
+<!-- DEMO LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+  <div class="lightbox-inner">
+    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <h3 style="font-family:'Sora',sans-serif;font-size:1.3rem;margin-bottom:8px">Jak działa PismaAI?</h3>
+    <p style="color:var(--text2);font-size:.9rem;margin-bottom:4px">Cały proces w 4 prostych krokach</p>
+    <div class="demo-steps">
+      <div class="demo-step">
+        <div class="demo-step-num">KROK 1</div>
+        <h4>📤 Wgraj pismo</h4>
+        <p>Przeciągnij PDF lub zdjęcie pisma do okna aplikacji. Obsługujemy dokumenty do 10 MB.</p>
+      </div>
+      <div class="demo-step">
+        <div class="demo-step-num">KROK 2</div>
+        <h4>🤖 AI analizuje</h4>
+        <p>Sztuczna inteligencja czyta pismo przez OCR, rozpoznaje jego typ i wyciąga kluczowe dane.</p>
+      </div>
+      <div class="demo-step">
+        <div class="demo-step-num">KROK 3</div>
+        <h4>✏️ Weryfikujesz</h4>
+        <p>Sprawdzasz rozpoznane dane, dodajesz własne instrukcje i wybierasz typ odpowiedzi.</p>
+      </div>
+      <div class="demo-step">
+        <div class="demo-step-num">KROK 4</div>
+        <h4>📥 Pobierasz list</h4>
+        <p>Gotowy, profesjonalny list w formacie PDF lub Word. Gotowy do druku i wysłania.</p>
+      </div>
+    </div>
+    <a href="/register" class="btn-primary" style="margin-top:24px;display:inline-flex">Wypróbuj za darmo →</a>
+  </div>
+</div>
+
+<script>
+// Scroll reveal
+const revealEls = document.querySelectorAll('.reveal');
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible') });
+}, {threshold: 0.1});
+revealEls.forEach(el => io.observe(el));
+
+// Counter animation
+function animateCounter() {
+  const el = document.getElementById('counter');
+  let start = 0, end = 500, dur = 2000, step = dur / end;
+  const timer = setInterval(() => {
+    start++;
+    el.textContent = start;
+    if(start >= end) clearInterval(timer);
+  }, step);
+}
+const counterIo = new IntersectionObserver((entries) => {
+  if(entries[0].isIntersecting){ animateCounter(); counterIo.disconnect(); }
+}, {threshold: 0.5});
+counterIo.observe(document.getElementById('counter'));
+
+// FAQ
+function toggleFaq(btn) {
+  const item = btn.parentElement;
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+  if(!isOpen) item.classList.add('open');
+}
+
+// Pricing toggle
+const prices = {monthly:{s:99,m:199,l:299}, yearly:{s:79,m:159,l:239}};
+function switchPricing(type, el) {
+  document.querySelectorAll('.toggle-opt').forEach(o => o.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('price-s').textContent = prices[type].s;
+  document.getElementById('price-m').textContent = prices[type].m;
+  document.getElementById('price-l').textContent = prices[type].l;
+}
+
+// Demo lightbox
+function openDemo() { document.getElementById('lightbox').classList.add('open'); }
+function closeLightbox(e) {
+  if(!e || e.target === document.getElementById('lightbox')) {
+    document.getElementById('lightbox').classList.remove('open');
+  }
+}
+
+// Mobile menu
+function toggleMenu() {
+  const links = document.querySelector('.nav-links');
+  links.style.display = links.style.display === 'flex' ? 'none' : 'flex';
+  links.style.flexDirection = 'column';
+  links.style.position = 'absolute';
+  links.style.top = '64px';
+  links.style.left = '0';
+  links.style.right = '0';
+  links.style.background = 'var(--bg2)';
+  links.style.padding = '20px';
+  links.style.borderBottom = '1px solid var(--border2)';
+}
+
+// Navbar scroll effect
+window.addEventListener('scroll', () => {
+  const nav = document.getElementById('navbar');
+  nav.style.background = window.scrollY > 50
+    ? 'rgba(10,15,30,0.97)'
+    : 'rgba(10,15,30,0.85)';
+});
+
+// Keyboard close lightbox
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') document.getElementById('lightbox').classList.remove('open');
+});
+</script>
+</body>
+</html>

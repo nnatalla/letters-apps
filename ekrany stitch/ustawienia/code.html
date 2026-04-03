@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pl"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sovereign AI | Ustawienia Płatności</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary": "#b8c4ff",
+                    "on-primary-container": "#a8b8ff",
+                    "error-container": "#93000a",
+                    "surface-container-low": "#141b2b",
+                    "on-secondary-fixed": "#0e1840",
+                    "tertiary-fixed-dim": "#ffb59a",
+                    "surface-container-high": "#232a3a",
+                    "on-surface": "#dce2f7",
+                    "error": "#ffb4ab",
+                    "surface-variant": "#2e3545",
+                    "surface-container": "#191f2f",
+                    "secondary": "#bbc4f6",
+                    "on-primary": "#002584",
+                    "tertiary-fixed": "#ffdbce",
+                    "surface-container-lowest": "#070e1d",
+                    "secondary-fixed": "#dde1ff",
+                    "secondary-container": "#3b446e",
+                    "secondary-fixed-dim": "#bbc4f6",
+                    "on-primary-fixed-variant": "#173bab",
+                    "tertiary": "#ffb59a",
+                    "on-secondary-container": "#a9b3e3",
+                    "background": "#0c1322",
+                    "outline": "#8e909f",
+                    "on-error": "#690005",
+                    "surface": "#0c1322",
+                    "primary-container": "#1e40af",
+                    "on-secondary-fixed-variant": "#3b446e",
+                    "surface-bright": "#323949",
+                    "on-tertiary": "#5a1b00",
+                    "on-surface-variant": "#c4c5d5",
+                    "surface-tint": "#b8c4ff",
+                    "inverse-on-surface": "#293040",
+                    "on-tertiary-fixed": "#380d00",
+                    "primary-fixed": "#dde1ff",
+                    "on-tertiary-container": "#ffa583",
+                    "on-primary-fixed": "#001453",
+                    "primary-fixed-dim": "#b8c4ff",
+                    "tertiary-container": "#872d00",
+                    "on-secondary": "#242e56",
+                    "surface-container-highest": "#2e3545",
+                    "on-background": "#dce2f7",
+                    "inverse-primary": "#3755c3",
+                    "on-error-container": "#ffdad6",
+                    "on-tertiary-fixed-variant": "#802a00",
+                    "inverse-surface": "#dce2f7",
+                    "surface-dim": "#0c1322",
+                    "outline-variant": "#444653"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Inter"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(46, 53, 69, 0.6);
+            backdrop-filter: blur(20px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface antialiased overflow-hidden">
+<!-- Background Dashboard (Dimmed) -->
+<div class="fixed inset-0 z-0 opacity-20 flex flex-col pointer-events-none">
+<!-- Mock Top Bar -->
+<div class="flex justify-between items-center px-8 h-16 w-full bg-[#141b2b]">
+<div class="text-xl font-bold tracking-tighter text-[#b8c4ff]">Sovereign AI</div>
+<div class="flex gap-6">
+<div class="text-slate-400">Panel sterowania</div>
+<div class="text-slate-400">Dokumenty</div>
+<div class="text-slate-400">Analiza</div>
+</div>
+<div class="flex gap-4">
+<span class="material-symbols-outlined">notifications</span>
+<span class="material-symbols-outlined">settings</span>
+</div>
+</div>
+<!-- Mock Content -->
+<div class="p-12 grid grid-cols-3 gap-8">
+<div class="h-64 bg-surface-container-high rounded-xl"></div>
+<div class="h-64 bg-surface-container-high rounded-xl"></div>
+<div class="h-64 bg-surface-container-high rounded-xl"></div>
+<div class="col-span-2 h-96 bg-surface-container-high rounded-xl"></div>
+<div class="h-96 bg-surface-container-high rounded-xl"></div>
+</div>
+</div>
+<!-- Modal Overlay -->
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 md:p-8">
+<!-- Account Settings Modal -->
+<div class="w-full max-w-6xl h-full max-h-[850px] bg-surface-container-low rounded-xl shadow-2xl flex overflow-hidden border-outline-variant/10 border">
+<!-- Side Navigation (Shared Component Logic) -->
+<aside class="hidden md:flex h-full w-64 flex-col py-6 px-4 gap-y-8 bg-[#141b2b] border-r border-outline-variant/5">
+<div class="flex items-center gap-3 px-2">
+<div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center text-primary font-bold">L</div>
+<div>
+<h2 class="text-lg font-semibold text-[#b8c4ff] leading-none">Pakiet Prawny</h2>
+<p class="text-xs text-slate-500 mt-1">Poziom Sovereign</p>
+</div>
+</div>
+<nav class="flex flex-col gap-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 hover:text-slate-300 transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">person</span>
+<span class="text-sm font-medium">Profil</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 hover:text-slate-300 transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">lock</span>
+<span class="text-sm font-medium">Bezpieczeństwo</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 hover:text-slate-300 transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">palette</span>
+<span class="text-sm font-medium">Wygląd</span>
+</a>
+<!-- Active State: Billing -->
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#b8c4ff] bg-[#1e40af]/10 font-medium scale-[0.98] active:scale-95 transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">payments</span>
+<span class="text-sm">Płatności</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 hover:text-slate-300 transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">history</span>
+<span class="text-sm font-medium">Dziennik audytu</span>
+</a>
+</nav>
+<div class="mt-auto px-2">
+<button class="w-full py-3 px-4 bg-gradient-to-br from-primary to-primary-container text-on-primary font-semibold rounded-lg text-sm transition-all hover:brightness-110 active:scale-95 shadow-lg shadow-primary/10">
+                        Ulepsz Plan
+                    </button>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto bg-surface p-8 md:p-12 flex flex-col gap-12">
+<!-- Header -->
+<header class="flex justify-between items-start">
+<div>
+<h1 class="text-4xl font-extrabold tracking-tight text-on-surface mb-2">Płatności i Plany Subskrypcyjne</h1>
+<p class="text-on-surface-variant max-w-lg leading-relaxed">Zarządzaj swoją subskrypcją instytucjonalną, przeglądaj limity dokumentów i dostosuj preferencje finansowe w Sovereign Ledger.</p>
+</div>
+<button class="text-on-surface-variant hover:text-white transition-colors">
+<span class="material-symbols-outlined text-3xl">close</span>
+</button>
+</header>
+<!-- Current Plan Status (Hero Pattern) -->
+<section class="bg-surface-container-high/40 rounded-xl p-8 border border-outline-variant/10 flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="flex items-center gap-6">
+<div class="w-16 h-16 rounded-full bg-primary-container/30 flex items-center justify-center border border-primary/20">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<div>
+<p class="text-sm text-primary font-semibold uppercase tracking-widest">Aktywna Subskrypcja</p>
+<h3 class="text-2xl font-bold">Pro Ledger</h3>
+<p class="text-on-surface-variant text-sm mt-1">Odnawia się 12 paź 2024 (99 PLN/mc)</p>
+</div>
+</div>
+<div class="flex gap-4">
+<button class="px-6 py-2.5 text-sm font-medium bg-surface-container-highest rounded-lg hover:bg-surface-variant transition-colors border border-outline-variant/20">Anuluj subskrypcję</button>
+<button class="px-6 py-2.5 text-sm font-medium bg-primary text-on-primary rounded-lg hover:bg-primary/90 transition-colors">Zarządzaj płatnościami</button>
+</div>
+</section>
+<!-- Plan Selection (Bento Grid Style) -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Free Plan -->
+<article class="flex flex-col p-8 rounded-xl bg-surface-container-low border border-outline-variant/5 hover:border-outline-variant/20 transition-all group">
+<h4 class="text-lg font-medium text-slate-400">Darmowy</h4>
+<div class="mt-4 flex items-baseline gap-1">
+<span class="text-4xl font-extrabold">0</span>
+<span class="text-slate-500 font-medium">PLN</span>
+</div>
+<p class="mt-4 text-sm text-on-surface-variant leading-relaxed">Niezbędne narzędzia dla niezależnych badaczy prawnych.</p>
+<ul class="mt-8 space-y-4 flex-1">
+<li class="flex items-center gap-3 text-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-lg">check_circle</span>
+                                Podstawowa analiza AI
+                            </li>
+<li class="flex items-center gap-3 text-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-lg">check_circle</span>
+                                10 dokumentów/mc
+                            </li>
+<li class="flex items-center gap-3 text-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-lg">check_circle</span>
+                                Wsparcie społeczności
+                            </li>
+</ul>
+<button class="mt-10 w-full py-3 rounded-lg border border-outline-variant/20 text-sm font-semibold hover:bg-surface-container-high transition-colors">Zmień na Darmowy</button>
+</article>
+<!-- Pro Plan (Featured) -->
+<article class="relative flex flex-col p-8 rounded-xl bg-surface-container-highest border-2 border-primary/40 shadow-xl shadow-primary/5 transform lg:-translate-y-2">
+<div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-on-primary px-4 py-1 rounded-full text-xs font-bold tracking-tighter uppercase">Najpopularniejszy</div>
+<h4 class="text-lg font-bold text-primary">Pro</h4>
+<div class="mt-4 flex items-baseline gap-1">
+<span class="text-4xl font-extrabold">99</span>
+<span class="text-primary/70 font-medium">PLN/mc</span>
+</div>
+<p class="mt-4 text-sm text-primary/80 leading-relaxed">Pełny zestaw narzędzi dla profesjonalnych kancelarii i podmiotów suwerennych.</p>
+<ul class="mt-8 space-y-4 flex-1">
+<li class="flex items-center gap-3 text-sm">
+<span class="material-symbols-outlined text-primary text-lg" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                OCR + Analiza AI
+                            </li>
+<li class="flex items-center gap-3 text-sm">
+<span class="material-symbols-outlined text-primary text-lg" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                Nielimitowane dokumenty
+                            </li>
+<li class="flex items-center gap-3 text-sm">
+<span class="material-symbols-outlined text-primary text-lg" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                Priorytetowe wsparcie 24/7
+                            </li>
+<li class="flex items-center gap-3 text-sm">
+<span class="material-symbols-outlined text-primary text-lg" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                Własne szkolenie modeli
+                            </li>
+</ul>
+<div class="mt-10 w-full py-3 rounded-lg bg-gradient-to-r from-primary to-primary-container text-on-primary text-center text-sm font-bold shadow-lg shadow-primary/20 cursor-default">
+                            Obecny plan
+                        </div>
+</article>
+<!-- Enterprise Plan -->
+<article class="flex flex-col p-8 rounded-xl bg-surface-container-low border border-outline-variant/5 hover:border-outline-variant/20 transition-all group overflow-hidden relative">
+<div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none"></div>
+<h4 class="text-lg font-medium text-slate-400">Enterprise</h4>
+<div class="mt-4 flex items-baseline gap-1">
+<span class="text-4xl font-extrabold">Kontakt</span>
+</div>
+<p class="mt-4 text-sm text-on-surface-variant leading-relaxed">Dostosowana infrastruktura, wdrożenia on-premise i white-labeling.</p>
+<ul class="mt-8 space-y-4 flex-1">
+<li class="flex items-center gap-3 text-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-lg">verified_user</span>
+                                Dedykowany opiekun konta
+                            </li>
+<li class="flex items-center gap-3 text-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-lg">verified_user</span>
+                                Dostęp do własnego API
+                            </li>
+<li class="flex items-center gap-3 text-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-lg">verified_user</span>
+                                SSO i zaawansowane zabezpieczenia
+                            </li>
+</ul>
+<button class="mt-10 w-full py-3 rounded-lg bg-surface-container-highest text-sm font-semibold hover:bg-surface-variant transition-colors border border-outline-variant/10">Skontaktuj się z nami</button>
+</article>
+</div>
+<!-- Usage Stats (Asymmetric Data Visuals) -->
+<section class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t border-outline-variant/10">
+<div class="flex flex-col gap-4">
+<h5 class="text-sm font-bold uppercase tracking-widest text-slate-500">Zużycie pamięci</h5>
+<div class="flex items-end gap-4">
+<span class="text-4xl font-bold">1.2 TB</span>
+<span class="text-on-surface-variant mb-1">z 5 TB użyte</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full w-[24%] shadow-[0_0_12px_rgba(184,196,255,0.4)]"></div>
+</div>
+</div>
+<div class="flex flex-col gap-4">
+<h5 class="text-sm font-bold uppercase tracking-widest text-slate-500">Pozostałe tokeny AI</h5>
+<div class="flex items-end gap-4">
+<span class="text-4xl font-bold">84%</span>
+<span class="text-on-surface-variant mb-1">92 400 tokenów zostało</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full w-[84%] shadow-[0_0_12px_rgba(184,196,255,0.4)]"></div>
+</div>
+</div>
+</section>
+<!-- Bottom Footer Actions -->
+<footer class="mt-auto flex justify-end items-center gap-4 py-6">
+<button class="px-8 py-3 text-sm font-semibold text-slate-400 hover:text-white transition-colors">Odrzuć zmiany</button>
+<button class="px-8 py-3 bg-primary text-on-primary text-sm font-bold rounded-lg shadow-xl shadow-primary/10 hover:brightness-110 active:scale-95 transition-all">Zapisz Zmiany</button>
+</footer>
+</main>
+</div>
+</div>
+</body></html>

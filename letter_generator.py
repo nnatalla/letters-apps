@@ -1,4 +1,4 @@
-import os
+﻿import os
 import requests
 import json
 from datetime import datetime
@@ -38,41 +38,43 @@ def get_current_date():
 
 def generate_universal_letter(category: str, subtype: str, extracted_fields: list,
                                company_name: str, city: str = "Łódź",
-                               scenario: str = None) -> str:
-    """Generuje list odpowiedź dla dowolnego typu pisma."""
+                               scenario: str = None,
+                               user_instructions: str = "",
+                               sender: dict = None) -> str:
+    """Generuje list odpowiedź dla dowolnego typu pisma, używając szablonu A4 (identyczny układ jak komornicze)."""
     context = get_context(category, subtype)
     today = get_current_date()
 
-    # Buduj opis pól dla AI
     fields_text = ""
     for field in extracted_fields:
         if field.get('value'):
             fields_text += f"- {field['label']}: {field['value']}\n"
 
     scenario_text = f"\nScenariusz odpowiedzi: {scenario}" if scenario else ""
+    instructions_text = f"\n\nDodatkowe instrukcje (OBOWIĄZKOWE do uwzględnienia):\n{user_instructions}" if user_instructions and user_instructions.strip() else ""
 
-    prompt = f"""Wygeneruj kompletny, gotowy do wysłania list odpowiedź w języku polskim.
+    prompt = f"""Wygeneruj list odpowiedź po polsku. Zwróć WYŁĄCZNIE poprawny JSON (bez markdown, bez komentarzy, bez ```).
 
-Nadawca (spółka): {company_name}
-Miasto nadawcy: {city}
-Data: {today}
-Typ pisma na które odpowiadamy: {subtype} ({category})
+Nadawca: {company_name}, miasto: {city}
+Typ pisma: {subtype} ({category})
 Kontekst: {context}{scenario_text}
 
-Dane wyciągnięte z pisma:
-{fields_text}
+Dane z pisma:
+{fields_text}{instructions_text}
 
-Wymagania dotyczące formatu listu:
-- Nagłówek z danymi nadawcy (spółka, adres: ul. Przykładowa 1, {city}, tel: 123456789)
-- Data po prawej stronie: {city}, dnia {today} r.
-- Dane adresata po prawej stronie
-- Tytuł pisma (wielkimi literami, wycentrowany)
-- Treść listu (zwrot grzecznościowy + treść + zakończenie)
-- Podpis
+Zwróć JSON o dokładnie tej strukturze:
+{{
+  "recipient_lines": ["linia1 adresata", "linia2", "linia3 ulica", "kod i miasto"],
+  "title": "TYTUŁ PISMA WIELKIMI LITERAMI",
+  "body_paragraphs": ["Szanowna Pani / Szanowny Panie,", "Treść akapitu...", "Kolejny akapit..."],
+  "closing": "Z poważaniem,"
+}}
 
-Wygeneruj TYLKO treść listu w formacie HTML (bez DOCTYPE, bez <html>, <head>, <body>).
-Użyj inline CSS. Styl: Times New Roman, font-size 12pt, marginesy.
-Nie dodawaj żadnych komentarzy ani wyjaśnień."""
+Zasady:
+- recipient_lines: dane adresata (instytucja, osoba, ulica, kod miasto) — bez HTML, bez tagów
+- title: krótki tytuł pisma, WIELKIE LITERY, bez tagów HTML
+- body_paragraphs: każdy akapit to osobny element tablicy, BEZ tagów HTML
+- closing: zwrot kończący"""
 
     headers = {
         "Authorization": f"Bearer {os.getenv('GROQ_API_KEY')}",
@@ -82,9 +84,114 @@ Nie dodawaj żadnych komentarzy ani wyjaśnień."""
     data = {
         "model": "llama-3.3-70b-versatile",
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.1
+        "temperature": 0.05
     }
 
     response = requests.post(GROQ_API_URL, headers=headers, json=data)
     response.raise_for_status()
-    return response.json()['choices'][0]['message']['content']
+    raw = response.json()['choices'][0]['message']['content'].strip()
+
+    # Usuń ewentualne bloki ```json ... ```
+    if '```' in raw:
+        parts_split = raw.split('```')
+        for chunk in parts_split:
+            chunk = chunk.strip()
+            if chunk.startswith('json'):
+                chunk = chunk[4:].strip()
+            if chunk.startswith('{'):
+                raw = chunk
+                break
+
+    letter_parts = json.loads(raw)
+
+    # Dane nadawcy z obiektu sender (jeśli przekazano)
+    if sender:
+        s_address = ", ".join(filter(None, [
+            sender.get('ulica', ''),
+            f"{sender.get('kod_pocztowy', '')} {sender.get('miasto', city)}".strip()
+        ]))
+        s_contact = " / ".join(filter(None, [sender.get('telefon', ''), sender.get('email', '')]))
+        s_city = sender.get('miasto', city) or city
+    else:
+        s_address = f"ul. Przykładowa 1, {city}"
+        s_contact = "tel: 123456789"
+        s_city = city
+
+    recipient_lines = letter_parts.get('recipient_lines', ['Adresat'])
+    recipient_html = ""
+    for i, line in enumerate(recipient_lines):
+        line = line.replace('<', '&lt;').replace('>', '&gt;')
+        if i == 0:
+            recipient_html += f"<strong>{line}</strong><br>\n      "
+        else:
+            recipient_html += f"{line}<br>\n      "
+
+    body_html = "\n".join(
+        f"      <p>{p.replace('<', '&lt;').replace('>', '&gt;')}</p>"
+        for p in letter_parts.get('body_paragraphs', [])
+    )
+
+    title = letter_parts.get('title', subtype.upper()).replace('<', '&lt;').replace('>', '&gt;')
+    closing = letter_parts.get('closing', 'Z poważaniem,').replace('<', '&lt;').replace('>', '&gt;')
+
+    return f"""<style>
+  .a4-frame {{
+    background: #e8e8e8;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    font-size: 13px;
+  }}
+  .wrapper {{
+    width: 210mm;
+    min-height: 297mm;
+    background: white;
+    padding: 2cm 2.5cm;
+    box-sizing: border-box;
+    font-family: "Times New Roman", serif;
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }}
+  .date {{ text-align: right; margin-bottom: 30px; }}
+  .sender {{ margin-bottom: 0; }}
+  .recipient {{ text-align: right; }}
+  .spacer {{ flex: 1; }}
+  .title {{
+    text-align: center;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-bottom: 30px;
+  }}
+  .content {{ text-align: justify; }}
+  .content p {{ margin: 0 0 12px; }}
+  .closing {{ margin-top: 30px; }}
+  .signature {{ margin-top: 50px; font-weight: bold; }}
+  .bottom-spacer {{ flex: 1; }}
+</style>
+<div class="a4-frame">
+  <div class="wrapper">
+    <div class="date">{s_city}, dnia {today} r.</div>
+    <div class="sender">
+      <strong>{company_name}</strong><br>
+      {s_address}<br>
+      {s_contact}
+    </div>
+    <div style="flex: 1.5"></div>
+    <div class="recipient">
+      {recipient_html}
+    </div>
+    <div style="flex: 1.5"></div>
+    <div class="title">{title}</div>
+    <div class="content">
+{body_html}
+    </div>
+    <div class="closing">{closing}</div>
+    <div class="signature">
+      ...............................................<br>
+      [Podpis nadawcy]
+    </div>
+    <div class="bottom-spacer"></div>
+  </div>
+</div>"""

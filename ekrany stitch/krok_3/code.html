@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pl"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sovereign AI - Ścieżka Komornicza: Weryfikacja</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-low": "#141b2b",
+                        "primary-fixed": "#dde1ff",
+                        "on-error": "#690005",
+                        "on-primary-container": "#a8b8ff",
+                        "on-secondary-container": "#a9b3e3",
+                        "secondary-fixed-dim": "#bbc4f6",
+                        "surface-variant": "#2e3545",
+                        "surface-bright": "#323949",
+                        "tertiary": "#ffb59a",
+                        "on-primary-fixed-variant": "#173bab",
+                        "on-primary-fixed": "#001453",
+                        "on-background": "#dce2f7",
+                        "error-container": "#93000a",
+                        "on-surface": "#dce2f7",
+                        "surface": "#0c1322",
+                        "on-secondary": "#242e56",
+                        "on-secondary-fixed-variant": "#3b446e",
+                        "surface-container-lowest": "#070e1d",
+                        "on-tertiary-container": "#ffa583",
+                        "on-secondary-fixed": "#0e1840",
+                        "background": "#0c1322",
+                        "secondary-fixed": "#dde1ff",
+                        "secondary": "#bbc4f6",
+                        "tertiary-container": "#872d00",
+                        "inverse-on-surface": "#293040",
+                        "on-surface-variant": "#c4c5d5",
+                        "secondary-container": "#3b446e",
+                        "on-primary": "#002584",
+                        "on-tertiary-fixed-variant": "#802a00",
+                        "surface-tint": "#b8c4ff",
+                        "primary": "#b8c4ff",
+                        "inverse-surface": "#dce2f7",
+                        "tertiary-fixed": "#ffdbce",
+                        "on-tertiary": "#5a1b00",
+                        "outline-variant": "#444653",
+                        "error": "#ffb4ab",
+                        "outline": "#8e909f",
+                        "surface-container": "#191f2f",
+                        "primary-container": "#1e40af",
+                        "surface-container-high": "#232a3a",
+                        "primary-fixed-dim": "#b8c4ff",
+                        "on-error-container": "#ffdad6",
+                        "tertiary-fixed-dim": "#ffb59a",
+                        "surface-container-highest": "#2e3545",
+                        "inverse-primary": "#3755c3",
+                        "surface-dim": "#0c1322",
+                        "on-tertiary-fixed": "#380d00"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface selection:bg-primary/30">
+<!-- Sidebar Navigation -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-[#141b2b] flex flex-col py-8 px-4 space-y-6 z-50">
+<div class="mb-8 px-4">
+<h1 class="text-lg font-black text-[#b8c4ff]">Bailiff Core</h1>
+<p class="font-['Inter'] text-sm font-medium uppercase tracking-widest text-slate-500">Legalny Rejestr</p>
+</div>
+<nav class="flex-grow space-y-2">
+<a class="flex items-center gap-3 px-4 py-3 transition-all duration-300 ease-in-out text-[#b8c4ff] font-bold border-r-2 border-[#1e40af] bg-[#232a3a]/30" href="#">
+<span class="material-symbols-outlined">person_search</span>
+<span class="font-['Inter'] text-sm font-medium uppercase tracking-widest">Nadawcy</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 transition-all duration-300 ease-in-out text-slate-500 hover:text-slate-200 hover:bg-[#232a3a]" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-['Inter'] text-sm font-medium uppercase tracking-widest">Konto</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 transition-all duration-300 ease-in-out text-slate-500 hover:text-slate-200 hover:bg-[#232a3a]" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="font-['Inter'] text-sm font-medium uppercase tracking-widest">Plan</span>
+</a>
+</nav>
+<div class="mt-auto px-4">
+<button class="w-full py-3 bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold rounded shadow-lg active:scale-95 duration-200 uppercase text-xs tracking-widest">
+                Nowe Pismo
+            </button>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 min-h-screen bg-surface flex flex-col">
+<!-- Top Navigation Bar -->
+<header class="bg-[#0c1322] w-full h-16 flex justify-between items-center px-8 backdrop-blur-xl bg-opacity-60 sticky top-0 z-40">
+<div class="flex items-center gap-4">
+<span class="text-xl font-bold tracking-tighter text-[#b8c4ff]">Sovereign AI</span>
+<div class="h-4 w-px bg-outline-variant/30 mx-2"></div>
+<button class="flex items-center gap-2 text-slate-400 hover:text-[#b8c4ff] transition-colors text-sm font-medium">
+<span class="material-symbols-outlined text-sm">arrow_back</span>
+                    Wróć do rozpoznania
+                </button>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative group">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-[#b8c4ff] cursor-pointer transition-colors">notifications</span>
+</div>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-primary/20">
+<img alt="Profil Komornika" class="w-full h-full object-cover" data-alt="portrait of a professional male legal assistant in a dark suit against a minimalist studio background with soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUx4lg1E4bQ5mxvTvAbqKLO0CIyB12E7G53TE9DEt1-GRC_HqfDIASEbldn62oUtrbMB-_Yl3Hicm852ncP1HwVek3d5QLmrfCtxYQArsJCcSVCllJum3gaxTbbirZZuaergBDQtWGhrGi6YgdkY4sjo1YC62MQ8PmUr64kkQoxi0ZiiPDaWrbSkJjVnMtESAuiUNe5NxMnTJx6VI_CYHQZ6BekGpX9-SVFwXJ1A0LClvqLbIUxnmhVL0zfUmq8fUddxr1HC6CIto"/>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<div class="flex-grow p-12 max-w-7xl mx-auto w-full">
+<!-- Stepper -->
+<div class="mb-16 flex items-center justify-between w-full relative">
+<div class="absolute top-1/2 left-0 w-full h-[2px] bg-surface-container-highest -z-10 -translate-y-1/2"></div>
+<!-- Step 1: Complete -->
+<div class="flex flex-col items-center">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-primary border-2 border-primary shadow-[0_0_15px_rgba(184,196,255,0.2)]">
+<span class="material-symbols-outlined text-xl">check</span>
+</div>
+<span class="mt-3 text-xs font-semibold text-primary uppercase tracking-tighter">Skanowanie</span>
+</div>
+<!-- Step 2: Complete -->
+<div class="flex flex-col items-center">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-primary border-2 border-primary">
+<span class="material-symbols-outlined text-xl">check</span>
+</div>
+<span class="mt-3 text-xs font-semibold text-primary uppercase tracking-tighter">Analiza</span>
+</div>
+<!-- Step 3: Active -->
+<div class="flex flex-col items-center">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary border-4 border-surface shadow-[0_0_20px_rgba(184,196,255,0.4)]">
+<span class="font-bold">3</span>
+</div>
+<span class="mt-3 text-xs font-bold text-on-surface uppercase tracking-tighter">Weryfikacja</span>
+</div>
+<!-- Step 4: Future -->
+<div class="flex flex-col items-center">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface-variant">
+<span>4</span>
+</div>
+<span class="mt-3 text-xs font-semibold text-on-surface-variant uppercase tracking-tighter">Eksport</span>
+</div>
+</div>
+<!-- Header Section -->
+<div class="mb-12">
+<h2 class="text-4xl font-extrabold tracking-tight text-on-surface mb-4">Weryfikacja Komornicza</h2>
+<p class="text-on-surface-variant text-lg max-w-2xl leading-relaxed">System zidentyfikował pismo komornicze. Wskaż odpowiedni scenariusz prawny, aby automatycznie wygenerować poprawną dokumentację procesową.</p>
+</div>
+<!-- Bento Grid of Scenario Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Option 1 -->
+<div class="group relative bg-surface-container-low p-8 rounded-xl transition-all duration-300 hover:bg-surface-container-high hover:-translate-y-1">
+<div class="flex justify-between items-start mb-6">
+<div class="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-primary text-3xl">person_off</span>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-widest text-primary/50 bg-primary/5 px-2 py-1 rounded">Scenariusz A</span>
+</div>
+<h3 class="text-xl font-bold text-on-surface mb-3 tracking-tight">Opcja: Osoba NIE PRACUJE</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed mb-8">Formalne poinformowanie komornika, że wskazany dłużnik nie jest już zatrudniony lub nigdy nie pracował w Twoim podmiocie.</p>
+<button class="w-full flex justify-between items-center px-6 py-4 bg-surface-container-highest text-primary font-bold rounded-lg group-hover:bg-primary group-hover:text-on-primary transition-all duration-300">
+<span>Wybierz</span>
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+<!-- Option 2 -->
+<div class="group relative bg-surface-container-low p-8 rounded-xl transition-all duration-300 hover:bg-surface-container-high hover:-translate-y-1">
+<div class="flex justify-between items-start mb-6">
+<div class="p-3 bg-tertiary/10 rounded-lg group-hover:bg-tertiary/20 transition-colors">
+<span class="material-symbols-outlined text-tertiary text-3xl">error</span>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-widest text-tertiary/50 bg-tertiary/5 px-2 py-1 rounded">Scenariusz B</span>
+</div>
+<h3 class="text-xl font-bold text-on-surface mb-3 tracking-tight">Opcja: Błędne pismo</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed mb-8">Korekta formalna w przypadku otrzymania niewłaściwego druku pisma, który nie odpowiada faktycznemu statusowi wierzytelności.</p>
+<button class="w-full flex justify-between items-center px-6 py-4 bg-surface-container-highest text-tertiary font-bold rounded-lg group-hover:bg-tertiary group-hover:text-on-tertiary transition-all duration-300">
+<span>Generuj korektę</span>
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+<!-- Option 3 -->
+<div class="group relative bg-surface-container-low p-8 rounded-xl transition-all duration-300 hover:bg-surface-container-high hover:-translate-y-1">
+<div class="flex justify-between items-start mb-6">
+<div class="p-3 bg-secondary/10 rounded-lg group-hover:bg-secondary/20 transition-colors">
+<span class="material-symbols-outlined text-secondary text-3xl">account_balance</span>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-widest text-secondary/50 bg-secondary/5 px-2 py-1 rounded">Scenariusz C</span>
+</div>
+<h3 class="text-xl font-bold text-on-surface mb-3 tracking-tight">Opcja: Zajęcie wierzytelności</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed mb-8">Standardowa procedura potwierdzenia zajęcia środków dłużnika oraz deklaracja regularnych potrąceń na konto kancelarii.</p>
+<button class="w-full flex justify-between items-center px-6 py-4 bg-surface-container-highest text-secondary font-bold rounded-lg group-hover:bg-secondary group-hover:text-on-secondary transition-all duration-300">
+<span>Wybierz</span>
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+<!-- Option 4 -->
+<div class="group relative bg-surface-container-low p-8 rounded-xl transition-all duration-300 hover:bg-surface-container-high hover:-translate-y-1 border border-primary/10">
+<div class="flex justify-between items-start mb-6">
+<div class="p-3 bg-primary-container/20 rounded-lg group-hover:bg-primary-container/40 transition-colors">
+<span class="material-symbols-outlined text-primary text-3xl">account_tree</span>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-widest text-primary/50 bg-primary/5 px-2 py-1 rounded">Scenariusz D</span>
+</div>
+<h3 class="text-xl font-bold text-on-surface mb-3 tracking-tight">Opcja: ZBIEG KOMORNICZY</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed mb-8">Obsługa sytuacji, w której wielu komorników prowadzi egzekucję z tego samego składnika majątku. Generuje pakiet pism informacyjnych.</p>
+<button class="w-full flex justify-between items-center px-6 py-4 bg-surface-container-highest text-primary font-bold rounded-lg group-hover:bg-primary-container group-hover:text-on-primary-container transition-all duration-300">
+<span>Rozpocznij proces zbiegu</span>
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Additional Help/Visual Ornament -->
+<div class="mt-12 p-8 bg-surface-container-lowest rounded-2xl flex items-center gap-8 border-l-4 border-primary">
+<div class="flex-shrink-0">
+<span class="material-symbols-outlined text-primary-container text-5xl">verified_user</span>
+</div>
+<div>
+<h4 class="text-lg font-bold text-on-surface">Inteligentna Asysta AI</h4>
+<p class="text-on-surface-variant text-sm">Na podstawie analizy nagłówka pisma (Sygn. akt: Km 452/24), system sugeruje wybór opcji <span class="text-primary font-bold">Zajęcie wierzytelności</span> jako najbardziej prawdopodobnej dla tego dokumentu.</p>
+</div>
+</div>
+</div>
+<!-- Sticky Footer Legal Info -->
+<footer class="mt-auto py-6 px-12 border-t border-outline-variant/10 flex justify-between items-center">
+<p class="text-[10px] text-slate-500 uppercase tracking-widest">© 2024 Sovereign AI | Architectural Ledger v4.2</p>
+<div class="flex gap-4">
+<span class="text-[10px] text-slate-500 uppercase tracking-widest">Szyfrowanie AES-256</span>
+<span class="text-[10px] text-slate-500 uppercase tracking-widest">Zgodność z RODO</span>
+</div>
+</footer>
+</main>
+</body></html>

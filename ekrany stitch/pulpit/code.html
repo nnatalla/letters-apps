@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pl"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sovereign OCR | Urzędowy Asystent AI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "background": "#0c1322",
+                      "on-tertiary-fixed-variant": "#802a00",
+                      "surface-container": "#191f2f",
+                      "on-background": "#dce2f7",
+                      "on-primary-container": "#a8b8ff",
+                      "inverse-primary": "#3755c3",
+                      "tertiary": "#ffb59a",
+                      "inverse-surface": "#dce2f7",
+                      "error-container": "#93000a",
+                      "on-secondary-container": "#a9b3e3",
+                      "secondary-fixed-dim": "#bbc4f6",
+                      "on-tertiary-fixed": "#380d00",
+                      "surface-dim": "#0c1322",
+                      "secondary-container": "#3b446e",
+                      "error": "#ffb4ab",
+                      "on-error-container": "#ffdad6",
+                      "outline-variant": "#444653",
+                      "surface-variant": "#2e3545",
+                      "tertiary-fixed": "#ffdbce",
+                      "primary-container": "#1e40af",
+                      "tertiary-container": "#872d00",
+                      "on-error": "#690005",
+                      "on-primary": "#002584",
+                      "surface-container-low": "#141b2b",
+                      "outline": "#8e909f",
+                      "on-primary-fixed": "#001453",
+                      "tertiary-fixed-dim": "#ffb59a",
+                      "surface-container-high": "#232a3a",
+                      "on-surface-variant": "#c4c5d5",
+                      "surface": "#0c1322",
+                      "secondary": "#bbc4f6",
+                      "on-surface": "#dce2f7",
+                      "primary-fixed-dim": "#b8c4ff",
+                      "on-secondary-fixed-variant": "#3b446e",
+                      "surface-container-highest": "#2e3545",
+                      "surface-container-lowest": "#070e1d",
+                      "primary-fixed": "#dde1ff",
+                      "on-secondary-fixed": "#0e1840",
+                      "surface-tint": "#b8c4ff",
+                      "on-primary-fixed-variant": "#173bab",
+                      "primary": "#b8c4ff",
+                      "on-tertiary-container": "#ffa583",
+                      "on-tertiary": "#5a1b00",
+                      "secondary-fixed": "#dde1ff",
+                      "inverse-on-surface": "#293040",
+                      "surface-bright": "#323949",
+                      "on-secondary": "#242e56"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "fontFamily": {
+                      "headline": ["Inter"],
+                      "body": ["Inter"],
+                      "label": ["Inter"]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+          font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+      </style>
+</head>
+<body class="dark bg-background text-on-background overflow-hidden">
+<!-- SideNavBar -->
+<aside class="bg-slate-900 h-screen w-64 left-0 top-0 fixed border-r border-white/5 flex flex-col h-full py-6 shadow-2xl shadow-black z-50">
+<div class="px-6 mb-10">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">account_balance</span>
+</div>
+<div>
+<h1 class="text-lg font-black text-blue-200 leading-none">Sovereign AI</h1>
+<p class="text-[10px] uppercase tracking-[0.2em] text-slate-500 mt-1">Cyfrowy Rejestr</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-2">
+<button class="w-full text-left bg-blue-900/40 text-blue-100 rounded-lg mx-2 px-4 py-3 flex items-center gap-3 transition-transform duration-200 scale-95">
+<span class="material-symbols-outlined text-lg" data-icon="person_search">person_search</span>
+<span class="text-sm font-medium">Nadawcy</span>
+</button>
+<button class="w-full text-left text-slate-400 mx-2 px-4 py-3 hover:text-slate-200 flex items-center gap-3 transition-all hover:bg-slate-800/50">
+<span class="material-symbols-outlined text-lg" data-icon="manage_accounts">manage_accounts</span>
+<span class="text-sm font-medium">Konto</span>
+</button>
+<button class="w-full text-left text-slate-400 mx-2 px-4 py-3 hover:text-slate-200 flex items-center gap-3 transition-all hover:bg-slate-800/50">
+<span class="material-symbols-outlined text-lg" data-icon="payments">payments</span>
+<span class="text-sm font-medium">Plan</span>
+</button>
+</nav>
+<div class="px-4 mt-auto space-y-2 pt-6 border-t border-white/5">
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-sm">add</span>
+            Nowe Pismo
+        </button>
+<div class="pt-4 space-y-1">
+<button class="w-full text-left text-slate-400 mx-2 px-4 py-3 hover:text-slate-200 flex items-center gap-3 transition-all hover:bg-slate-800/50">
+<span class="material-symbols-outlined text-lg" data-icon="settings">settings</span>
+<span class="text-sm font-medium">Ustawienia</span>
+</button>
+<button class="w-full text-left text-slate-400 mx-2 px-4 py-3 hover:text-slate-200 flex items-center gap-3 transition-all hover:bg-slate-800/50">
+<span class="material-symbols-outlined text-lg" data-icon="logout">logout</span>
+<span class="text-sm font-medium">Wyloguj</span>
+</button>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="fixed top-0 right-0 left-64 z-40 bg-slate-950/60 backdrop-blur-xl border-b border-white/5 px-8 py-4 flex justify-between items-center shadow-xl shadow-blue-950/20">
+<div class="flex items-center gap-8">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-400 transition-colors">search</span>
+<input class="bg-surface-container-highest/50 border-none rounded-full pl-10 pr-6 py-2 text-sm w-80 focus:ring-1 focus:ring-blue-400/50 transition-all placeholder:text-slate-500" placeholder="Szukaj w dokumentach..." type="text"/>
+</div>
+<nav class="flex gap-6">
+<a class="text-blue-200 border-b-2 border-blue-400 pb-1 text-sm font-medium tracking-tight" href="#">Pulpit</a>
+<a class="text-slate-400 hover:text-blue-200 transition-colors text-sm font-medium tracking-tight" href="#">Historia Pism</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-white/5 rounded-full transition-all text-slate-400">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 hover:bg-white/5 rounded-full transition-all text-slate-400">
+<span class="material-symbols-outlined" data-icon="dark_mode">dark_mode</span>
+</button>
+<div class="h-8 w-[1px] bg-white/10 mx-2"></div>
+<div class="flex items-center gap-3 pl-2">
+<div class="text-right">
+<p class="text-xs font-bold text-blue-100">Mec. Jan Kowalski</p>
+<p class="text-[10px] text-slate-500">Kancelaria Adwokacka</p>
+</div>
+<img alt="Awatar użytkownika" class="w-10 h-10 rounded-full border-2 border-primary/20 object-cover" data-alt="Profesjonalny portret prawnika w ciemnym garniturze" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCaFOaw1H5izxcZioXm-tIATAPzxPYEXRJ_zg2wpFkjDh1XAltz785vsCzkqnDn34AZmznUPI2Pgj5aS8dAv2IAIIL3z8Qu_XFg9cVLOFtQmOvvbUgT7EliyeZNyI1Ms5nhI7sjLnX6L_N93458-QLcI--IznZDGXOPiDFeU1U2ywEtd5fmHHrI9H7GuVzlxnb7oQXaY-9Mk2BsHWaOsaU78-mQgM79sMhwNl2ASPeiCbdEAEaO5g6uRBMK0U1pkKFOhQ_dcM84B7E"/>
+</div>
+</div>
+</header>
+<!-- Canvas -->
+<div class="pt-24 px-12 pb-12 flex-1 overflow-y-auto">
+<!-- Dashboard Header -->
+<div class="mb-12">
+<h2 class="text-4xl font-extrabold tracking-tighter text-on-background mb-2">System Procesowania Pism</h2>
+<p class="text-on-surface-variant max-w-2xl leading-relaxed">Prześlij dokumenty urzędowe, by automatycznie wyodrębnić kluczowe dane, sklasyfikować sprawę i przygotować gotową odpowiedź prawną w kilka sekund.</p>
+</div>
+<!-- Stepper Navigation -->
+<div class="mb-12 max-w-4xl">
+<div class="flex justify-between items-center relative">
+<!-- Progress Line -->
+<div class="absolute top-1/2 left-0 w-full h-[2px] bg-surface-container-highest -translate-y-1/2 -z-10"></div>
+<div class="absolute top-1/2 left-0 w-1/3 h-[2px] bg-primary -translate-y-1/2 -z-10"></div>
+<!-- Step 1 -->
+<div class="flex flex-col items-center">
+<div class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold shadow-lg shadow-primary/30">1</div>
+<span class="text-xs font-semibold mt-3 text-primary uppercase tracking-wider">Prześlij pismo</span>
+</div>
+<!-- Step 2 -->
+<div class="flex flex-col items-center">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest text-slate-500 flex items-center justify-center font-bold">2</div>
+<span class="text-xs font-semibold mt-3 text-slate-500 uppercase tracking-wider">Przejrzyj dane</span>
+</div>
+<!-- Step 3 -->
+<div class="flex flex-col items-center">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest text-slate-500 flex items-center justify-center font-bold">3</div>
+<span class="text-xs font-semibold mt-3 text-slate-500 uppercase tracking-wider">Weryfikacja</span>
+</div>
+<!-- Step 4 -->
+<div class="flex flex-col items-center">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest text-slate-500 flex items-center justify-center font-bold">4</div>
+<span class="text-xs font-semibold mt-3 text-slate-500 uppercase tracking-wider">Gotowe</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-8">
+<!-- Main Upload Area -->
+<div class="col-span-12 lg:col-span-8 space-y-8">
+<!-- Dropzone -->
+<div class="group relative bg-surface-container-low border-2 border-dashed border-outline-variant/30 rounded-3xl p-12 flex flex-col items-center justify-center text-center transition-all hover:border-primary/50 hover:bg-primary/5 cursor-pointer">
+<div class="w-20 h-20 rounded-2xl bg-surface-container-high flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-4xl text-primary" style="font-variation-settings: 'FILL' 1;">upload_file</span>
+</div>
+<h3 class="text-xl font-bold mb-2">Przeciągnij i upuść dokumenty</h3>
+<p class="text-on-surface-variant text-sm mb-8">Obsługiwane formaty: PDF, JPG, PNG (Maks. 25MB)</p>
+<button class="bg-surface-container-highest px-8 py-3 rounded-xl font-bold hover:bg-primary-container hover:text-white transition-all">
+                        Wybierz z dysku
+                    </button>
+</div>
+<!-- Configuration Section -->
+<div class="bg-surface-container rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+<div class="flex items-center gap-6">
+<label class="relative inline-flex items-center cursor-pointer group">
+<input class="sr-only peer" type="checkbox" value=""/>
+<div class="w-14 h-8 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary"></div>
+<span class="ml-4 text-sm font-bold text-on-background">Sprawa komornicza</span>
+</label>
+<div class="h-10 w-[1px] bg-outline-variant/20 hidden md:block"></div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">info</span>
+<span class="text-xs">Włączenie tej opcji uruchomi dedykowane algorytmy dla egzekucji.</span>
+</div>
+</div>
+<button class="w-full md:w-auto bg-primary text-on-primary font-black px-10 py-4 rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-primary/20 hover:scale-[1.02] transition-transform">
+                        ROZPOCZNIJ ANALIZĘ
+                        <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Side Info Panel -->
+<div class="col-span-12 lg:col-span-4 space-y-6">
+<div class="bg-gradient-to-br from-blue-900/20 to-transparent border border-white/5 rounded-3xl p-8">
+<h4 class="text-lg font-bold mb-4 flex items-center gap-2 text-blue-200">
+<span class="material-symbols-outlined">auto_awesome</span>
+                        Inteligentna Analiza
+                    </h4>
+<div class="space-y-4">
+<div class="flex gap-4">
+<div class="shrink-0 w-8 h-8 rounded-lg bg-blue-400/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-blue-300 text-sm">psychology</span>
+</div>
+<p class="text-sm text-slate-300 leading-relaxed"><strong class="text-blue-100">Klasyfikacja:</strong> AI automatycznie rozpoznaje typ pisma (wezwanie, nakaz, postanowienie).</p>
+</div>
+<div class="flex gap-4">
+<div class="shrink-0 w-8 h-8 rounded-lg bg-blue-400/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-blue-300 text-sm">chip_extraction</span>
+</div>
+<p class="text-sm text-slate-300 leading-relaxed"><strong class="text-blue-100">OCR Ultra:</strong> Wyodrębniamy sygnatury, kwoty i terminy z 99.8% dokładnością.</p>
+</div>
+<div class="flex gap-4">
+<div class="shrink-0 w-8 h-8 rounded-lg bg-blue-400/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-blue-300 text-sm">gavel</span>
+</div>
+<p class="text-sm text-slate-300 leading-relaxed"><strong class="text-blue-100">Walidacja Prawna:</strong> System sprawdza pismo pod kątem błędów formalnych organu.</p>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-high rounded-3xl p-8">
+<h4 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-6">Ostatnio Przetworzone</h4>
+<div class="space-y-6">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-emerald-400">task_alt</span>
+</div>
+<div>
+<p class="text-sm font-bold">KM 124/24</p>
+<p class="text-[10px] text-slate-500">2 min temu</p>
+</div>
+</div>
+<span class="text-xs font-bold text-emerald-400">GOTOWE</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-blue-400">sync</span>
+</div>
+<div>
+<p class="text-sm font-bold">GNP-342/23</p>
+<p class="text-[10px] text-slate-500">14 min temu</p>
+</div>
+</div>
+<span class="text-xs font-bold text-blue-400">ANALIZA</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Loading Modal -->
+<div class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-md">
+<div class="bg-surface-container-high border border-white/10 rounded-[2rem] p-12 max-w-sm w-full flex flex-col items-center text-center shadow-2xl shadow-black">
+<div class="relative w-24 h-24 mb-8">
+<div class="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
+<div class="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+<div class="absolute inset-4 bg-primary/10 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-3xl">scan</span>
+</div>
+</div>
+<h3 class="text-2xl font-bold mb-2">Przetwarzanie AI</h3>
+<p class="text-on-surface-variant mb-6 text-sm">Klasyfikowanie pisma...</p>
+<div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-2/3"></div>
+</div>
+</div>
+</div>
+<!-- Legal Drawer -->
+<div class="hidden fixed right-0 top-0 h-screen w-[400px] bg-surface-bright/95 backdrop-blur-2xl z-[60] shadow-[-20px_0_40px_rgba(0,0,0,0.4)] transform translate-x-full transition-transform">
+<div class="p-8">
+<div class="flex justify-between items-center mb-8">
+<h3 class="text-xl font-bold">Szczegóły OCR</h3>
+<button class="p-2 hover:bg-white/10 rounded-lg">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="space-y-6">
+<div class="bg-surface-container-lowest p-4 rounded-xl">
+<label class="text-[10px] text-slate-500 uppercase font-black">Typ Dokumentu</label>
+<p class="text-sm font-bold text-blue-200">Zawiadomienie o wszczęciu egzekucji</p>
+</div>
+</div>
+</div>
+</div>
+</body></html>

@@ -1,8 +1,9 @@
-import os
+﻿import os
 import requests
 import json
 import mimetypes
-from flask import Flask, request, jsonify, send_from_directory, send_file
+from flask import Flask, request, jsonify, send_from_directory, send_file, redirect, url_for, render_template
+from flask_login import LoginManager, login_required, current_user
 from dotenv import load_dotenv
 import pytesseract
 from PIL import Image
@@ -11,8 +12,11 @@ from groq import Groq
 import tempfile
 from datetime import datetime
 from database import DatabaseManager
+from models import init_db, db as orm_db, populate_test_data, Sender, GeneratedLetter, Plan
+from auth import auth_bp
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 
 # Load environment variables
 load_dotenv()
@@ -42,6 +46,78 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # Initialize database with correct path
 db = DatabaseManager(DATABASE_PATH)
 
+# ── SQLAlchemy ORM + Flask-Login ──────────────────────────────
+init_db(app)
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login_page"
+
+@login_manager.user_loader
+def load_user(user_id):
+    try:
+        from models import User
+        return orm_db.session.get(User, int(user_id))
+    except Exception:
+        return None
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    if request.path.startswith('/api/') or request.path.startswith('/auth/'):
+        return jsonify({"error": "Wymagane logowanie.", "code": 401}), 401
+    return redirect(url_for('login_page'))
+
+app.register_blueprint(auth_bp)
+
+with app.app_context():
+    orm_db.create_all()
+
+    # Migracje SQLite: dodajemy nowe kolumny jeśli nie istnieją
+    _new_columns = [
+        ("users", "activation_token",       "VARCHAR(64)"),
+        ("users", "reset_password_token",    "VARCHAR(64)"),
+        ("users", "reset_password_expires",  "DATETIME"),
+        ("users", "display_name",            "VARCHAR(100)"),
+        ("users", "plan",                    "VARCHAR(10) NOT NULL DEFAULT 'free'"),
+        ("users", "letters_used",            "INTEGER NOT NULL DEFAULT 0"),
+        ("users", "letters_limit",           "INTEGER NOT NULL DEFAULT 50"),
+        ("users", "theme",                   "VARCHAR(10) NOT NULL DEFAULT 'light'"),
+        ("users", "email_notifications",     "BOOLEAN NOT NULL DEFAULT 1"),
+        ("users", "last_login",              "DATETIME"),
+    ]
+    try:
+        from sqlalchemy import text as _text
+        with orm_db.engine.connect() as _conn:
+            for _table, _col, _type in _new_columns:
+                try:
+                    _conn.execute(_text(f"ALTER TABLE {_table} ADD COLUMN {_col} {_type}"))
+                    _conn.commit()
+                except Exception:
+                    pass  # Kolumna już istnieje
+    except Exception as _e:
+        print(f"Migracja kolumn: {_e}")
+
+    # Seed planów (tylko jeśli tabela pusta)
+    try:
+        from models import Plan as _Plan
+        if _Plan.query.count() == 0:
+            orm_db.session.add_all([
+                _Plan(name="free", display_name="Plan Free",   price=0,     letters_limit=50,  description="Darmowy plan startowy – 50 pism miesięcznie."),
+                _Plan(name="S",    display_name="Plan S",      price=10000, letters_limit=50,  description="Plan S – 50 pism miesięcznie, wsparcie email."),
+                _Plan(name="M",    display_name="Plan M",      price=20000, letters_limit=110, description="Plan M – 110 pism miesięcznie, priorytetowe wsparcie."),
+                _Plan(name="L",    display_name="Plan L",      price=30000, letters_limit=200, description="Plan L – 200 pism miesięcznie, dedykowany opiekun."),
+            ])
+            orm_db.session.commit()
+            print("✅ Plany dodane do bazy")
+    except Exception as _e:
+        print(f"Seed planów: {_e}")
+
+    try:
+        populate_test_data()
+    except Exception as e:
+        print(f"Seed danych: {e}")
+# ─────────────────────────────────────────────────────────────
+
 # Klucze API
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
 if not GROQ_API_KEY:
@@ -50,10 +126,21 @@ if not GROQ_API_KEY:
 # Endpointy API
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
+@app.route('/login')
+def login_page():
+    """Strona logowania."""
+    if current_user.is_authenticated:
+        return redirect(url_for('serve_index'))
+    return render_template('login.html')
+
 @app.route('/')
+@login_required
 def serve_index():
-    """Endpoint do serwowania pliku index.html."""
-    return send_from_directory('.', 'index.html')
+    """Endpoint do serwowania pliku index.html – bez cache po stronie przeglądarki."""
+    response = send_from_directory('.', 'index.html')
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    return response
 
 @app.route('/logo.png')
 def serve_logo():
@@ -66,67 +153,94 @@ def serve_static(filename):
     return send_from_directory('static', filename)
 
 @app.route('/process-file', methods=['POST'])
+@login_required
 def process_file():
-    """Endpoint do przetwarzania przesłanego pliku - obsługuje wszystkie typy pism."""
+    """Endpoint do przetwarzania przeslanego pliku.
+    Próbuje kolejkować przez Celery; jeśli Redis jest niedostępny, przetwarza synchronicznie.
+    """
     if 'file' not in request.files or request.files['file'].filename == '':
-        return jsonify({"error": "Brak pliku w żądaniu lub nazwa pliku jest pusta"}), 400
+        return jsonify({"error": "Brak pliku w zadaniu lub nazwa pliku jest pusta"}), 400
 
     file = request.files['file']
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+    from werkzeug.utils import secure_filename
+    safe_name = secure_filename(file.filename)
+    if not safe_name:
+        return jsonify({"error": "Nieprawidlowa nazwa pliku"}), 400
+
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], safe_name)
 
     try:
         file.save(filepath)
-        file_extension = os.path.splitext(file.filename)[1].lower()
-        ocr_text = ""
+    except Exception as e:
+        return jsonify({"error": f"Nie udalo sie zapisac pliku: {e}"}), 500
+
+    # Próba async przez Celery + Redis
+    try:
+        from tasks import process_document_task
+        task = process_document_task.delay(filepath, safe_name)
+        return jsonify({"task_id": task.id})
+    except Exception:
+        pass  # Redis niedostępny – fallback do przetwarzania synchronicznego
+
+    # Fallback: synchroniczne OCR + analiza (gdy Redis/Celery niedostępny)
+    try:
+        import pytesseract
+        from PIL import Image
+        from pdf2image import convert_from_path
+        from orchestrator import process_document
+
+        is_production = os.getenv('FLASK_ENV') == 'production'
+        if is_production:
+            pytesseract.pytesseract.tesseract_cmd = os.getenv('TESSERACT_CMD', '/usr/bin/tesseract')
+            poppler_path = os.getenv('POPPLER_PATH', '/usr/bin')
+        else:
+            pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
+            poppler_path = r'C:\Poppler\poppler-23.01.0\Library\bin'
+
+        file_extension = os.path.splitext(safe_name)[1].lower()
+        ocr_text = ''
 
         if file_extension == '.pdf':
-            print("Przetwarzanie pliku PDF...")
-            try:
-                if poppler_path:
-                    images = convert_from_path(filepath, poppler_path=poppler_path)
-                else:
-                    images = convert_from_path(filepath)
-                max_pages = min(len(images), 5)
-                for i, image in enumerate(images[:max_pages]):
-                    page_text = pytesseract.image_to_string(image, lang='pol')
-                    ocr_text += f"\n--- STRONA {i+1} ---\n{page_text}\n"
-            except Exception as pdf_error:
-                return jsonify({"error": f"Błąd przetwarzania PDF: {str(pdf_error)}"}), 500
-
-        elif file_extension in ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff']:
+            images = convert_from_path(filepath, poppler_path=poppler_path)
+            for i, image in enumerate(images[:5]):
+                page_text = pytesseract.image_to_string(image, lang='pol')
+                ocr_text += f'\n--- STRONA {i+1} ---\n{page_text}\n'
+        elif file_extension in ('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff'):
             ocr_text = pytesseract.image_to_string(Image.open(filepath), lang='pol')
         else:
-            return jsonify({"error": "Nieobsługiwany format pliku."}), 400
+            raise ValueError(f'Nieobslugiwany format pliku: {file_extension}')
 
         if not ocr_text.strip():
-            return jsonify({"error": "Nie udało się wyodrębnić tekstu z pliku."}), 400
+            raise ValueError('Nie udalo sie wyodrebnic tekstu z pliku.')
 
-        # NOWA LOGIKA: orkiestrator zamiast bezpośredniego wywołania Groq
-        from orchestrator import process_document
         result = process_document(ocr_text)
-
-        if result['mode'] == 'komornicze':
-            # Stara ścieżka - zwracamy stary format, frontend działa bez zmian
-            return jsonify({
-                "dane": result['dane'],
-                "mode": "komornicze",
-                "classification": result['classification']
-            })
-        else:
-            # Nowa ścieżka - zwracamy dynamiczne pola
-            return jsonify({
-                "mode": "universal",
-                "classification": result['classification'],
-                "fields": result['fields'],
-                "summary": result['summary'],
-                "suggested_response_type": result['suggested_response_type']
-            })
+        return jsonify({"result": result})
 
     except Exception as e:
-        return jsonify({"error": f"Wystąpił nieoczekiwany błąd: {e}"}), 500
+        return jsonify({"error": f"Blad przetwarzania: {e}"}), 500
     finally:
-        if os.path.exists(filepath):
-            os.remove(filepath)
+        try:
+            if os.path.exists(filepath):
+                os.remove(filepath)
+        except OSError:
+            pass
+@login_required
+def task_status(task_id):
+    """Sprawdza status zadania Celery i zwraca wynik gdy gotowy."""
+    try:
+        from tasks import celery as celery_app
+        task = celery_app.AsyncResult(task_id)
+        if task.state == 'PENDING':
+            return jsonify({"status": "PENDING"})
+        elif task.state == 'STARTED':
+            return jsonify({"status": "STARTED"})
+        elif task.state == 'SUCCESS':
+            return jsonify({"status": "SUCCESS", "result": task.result})
+        elif task.state == 'FAILURE':
+            return jsonify({"status": "FAILURE", "error": str(task.info)})
+        return jsonify({"status": task.state})
+    except Exception as e:
+        return jsonify({"error": f"Blad pobierania statusu zadania: {e}"}), 500
 def extract_data_with_groq(ocr_text):
     """Funkcja używająca Groq do ekstrakcji danych ze zdeskturyzowanego tekstu."""
     if not ocr_text or ocr_text.strip() == "":
@@ -209,8 +323,26 @@ def extract_data_with_groq(ocr_text):
         print("-------------------------------------")
         raise ValueError(f"Błąd przetwarzania odpowiedzi Groq AI: Otrzymano nieoczekiwany format. {e}") from e
 # ... (pozostały kod bez zmian)
+def _check_letter_limit_and_save(user, title, document_type, subtype, html_content, sender_name, recipient_name):
+    """Sprawdza limit pism i zapisuje do historii. Zwraca (True, None) lub (False, response)."""
+    if user.letters_used >= user.letters_limit:
+        return False, (jsonify({"error": f"Przekroczono miesięczny limit pism ({user.letters_limit}). Zmień plan lub poczekaj do następnego miesiąca."}), 429)
+    letter = GeneratedLetter(
+        user_id=user.id,
+        title=title,
+        document_type=document_type,
+        subtype=subtype,
+        html_content=html_content,
+        sender_name=sender_name,
+        recipient_name=recipient_name,
+    )
+    orm_db.session.add(letter)
+    user.letters_used = (user.letters_used or 0) + 1
+    orm_db.session.commit()
+    return True, letter
 
 @app.route('/generate-letter', methods=['POST'])
+@login_required
 def generate_letter():
     """Endpoint do generowania listów za pomocą Groq AI z szablonem HTML."""
     payload = request.get_json()
@@ -218,6 +350,7 @@ def generate_letter():
     opcja = payload['option']
     dane = payload['dane']
     company = payload['company']
+    user_instructions = payload.get('user_instructions', '')
     
     # Przygotowanie danych dla szablonu
     sender_data = {
@@ -231,21 +364,43 @@ def generate_letter():
         'address': f"{dane['komornik']['adres']}, {dane['komornik']['miasto']}"
     }
     
+    _opcja_labels = {
+        1: "osoba nie pracuje",
+        2: "błędne pismo",
+        3: "zajęcie wierzytelności",
+        4: "zbieg komorniczy",
+    }
+    _subtype_label = _opcja_labels.get(opcja, f"opcja {opcja}")
+    _recipient_name = dane['komornik'].get('imieNazwisko', '')
+
     if opcja == 1:
         content_type = "INFORMACJA O ZAKOŃCZENIU WSPÓŁPRACY Z FIRMĄ"
         bailiff_greeting = get_bailiff_greeting(dane['komornik'].get('plec', 'M'))
         specific_content = f"""
         <p>{bailiff_greeting},</p>
-        <p>Informuję, iż <strong>{dane['dluznik']['imieNazwisko']}</strong> PESEL: <strong>{dane['dluznik']['pesel']}</strong>, 
+        <p>Informuję, iż <strong>{dane['dluznik']['imieNazwisko']}</strong> PESEL: <strong>{dane['dluznik']['pesel']}</strong>,
         zakończyła współpracę z naszą firmą w dniu <strong>{dane.get('dataZakonczenia', 'nie podano')}</strong>.</p>
         <p>W związku z powyższym, osoba ta nie jest już naszym pracownikiem/współpracownikiem.</p>
         """
-        
+
         try:
+            if user_instructions and user_instructions.strip():
+                specific_content += f'<p style="margin-top:16px; padding:12px; background:#fffde7; border-left:4px solid #f9a825; font-style:italic;"><strong>Uwagi dodatkowe:</strong> {user_instructions}</p>'
             generated_content = generate_letter_with_template(
                 content_type, sender_data, recipient_data, dane, specific_content
             )
-            return jsonify({"list": generated_content})
+            ok, result = _check_letter_limit_and_save(
+                current_user,
+                title=f"Odpowiedź na pismo komornicze – {_subtype_label}",
+                document_type="KOMORNICZE",
+                subtype=_subtype_label,
+                html_content=generated_content,
+                sender_name=company,
+                recipient_name=_recipient_name,
+            )
+            if not ok:
+                return result
+            return jsonify({"list": generated_content, "letter_id": result.id})
         except Exception as e:
             return jsonify({"error": f"Błąd generowania listu: {e}"}), 500
 
@@ -254,17 +409,30 @@ def generate_letter():
         bailiff_greeting = get_bailiff_greeting(dane['komornik'].get('plec', 'M'))
         specific_content = f"""
         <p>{bailiff_greeting},</p>
-        <p>W odpowiedzi na otrzymane pismo, informujemy że <strong>{dane['dluznik']['imieNazwisko']}</strong> 
+        <p>W odpowiedzi na otrzymane pismo, informujemy że <strong>{dane['dluznik']['imieNazwisko']}</strong>
         PESEL: <strong>{dane['dluznik']['pesel']}</strong> rzeczywiście pracuje w naszej spółce.</p>
-        <p>Otrzymane pismo dotyczy wynagrodzenia za pracę, podczas gdy osoba ta jest aktualnie zatrudniona. 
+        <p>Otrzymane pismo dotyczy wynagrodzenia za pracę, podczas gdy osoba ta jest aktualnie zatrudniona.
         Prosimy o wyjaśnienie charakteru pisma lub przesłanie właściwego dokumentu dotyczącego zajęcia wierzytelności.</p>
         """
-        
+
         try:
+            if user_instructions and user_instructions.strip():
+                specific_content += f'<p style="margin-top:16px; padding:12px; background:#fffde7; border-left:4px solid #f9a825; font-style:italic;"><strong>Uwagi dodatkowe:</strong> {user_instructions}</p>'
             generated_content = generate_letter_with_template(
                 content_type, sender_data, recipient_data, dane, specific_content
             )
-            return jsonify({"list": generated_content})
+            ok, result = _check_letter_limit_and_save(
+                current_user,
+                title=f"Odpowiedź na pismo komornicze – {_subtype_label}",
+                document_type="KOMORNICZE",
+                subtype=_subtype_label,
+                html_content=generated_content,
+                sender_name=company,
+                recipient_name=_recipient_name,
+            )
+            if not ok:
+                return result
+            return jsonify({"list": generated_content, "letter_id": result.id})
         except Exception as e:
             return jsonify({"error": f"Błąd generowania listu: {e}"}), 500
 
@@ -274,31 +442,45 @@ def generate_letter():
             umowy_tekst.append("umowa zlecenie")
         if dane['umowy']['najem']:
             umowy_tekst.append("umowa najmu pojazdu")
-        
+
         umowy_str = " i ".join(umowy_tekst) if umowy_tekst else "umowa współpracy"
-        
+
         content_type = "POTWIERDZENIE ZATRUDNIENIA I ZAJĘCIA WIERZYTELNOŚCI"
         bailiff_greeting = get_bailiff_greeting(dane['komornik'].get('plec', 'M'))
         specific_content = f"""
         <p>{bailiff_greeting},</p>
-        <p>Potwierdzamy, że <strong>{dane['dluznik']['imieNazwisko']}</strong> PESEL: <strong>{dane['dluznik']['pesel']}</strong> 
+        <p>Potwierdzamy, że <strong>{dane['dluznik']['imieNazwisko']}</strong> PESEL: <strong>{dane['dluznik']['pesel']}</strong>
         pracuje w naszej spółce na podstawie: <strong>{umowy_str}</strong>.</p>
-        <p>Otrzymane pismo dotyczące zajęcia wierzytelności jest prawidłowe. Jesteśmy gotowi do wykonania postanowień 
+        <p>Otrzymane pismo dotyczące zajęcia wierzytelności jest prawidłowe. Jesteśmy gotowi do wykonania postanowień
         zawartych w piśmie zgodnie z obowiązującymi przepisami.</p>
         <p>Sygnatura sprawy: <strong>{dane['sprawa']['sygnaturaSprawy']}</strong></p>
         """
-        
+
         try:
+            if user_instructions and user_instructions.strip():
+                specific_content += f'<p style="margin-top:16px; padding:12px; background:#fffde7; border-left:4px solid #f9a825; font-style:italic;"><strong>Uwagi dodatkowe:</strong> {user_instructions}</p>'
             generated_content = generate_letter_with_template(
                 content_type, sender_data, recipient_data, dane, specific_content
             )
-            return jsonify({"list": generated_content})
+            ok, result = _check_letter_limit_and_save(
+                current_user,
+                title=f"Odpowiedź na pismo komornicze – {_subtype_label}",
+                document_type="KOMORNICZE",
+                subtype=_subtype_label,
+                html_content=generated_content,
+                sender_name=company,
+                recipient_name=_recipient_name,
+            )
+            if not ok:
+                return result
+            return jsonify({"list": generated_content, "letter_id": result.id})
         except Exception as e:
             return jsonify({"error": f"Błąd generowania listu: {e}"}), 500
 
     return jsonify({"error": "Nieobsługiwana opcja."}), 400
 
 @app.route('/generate-zbieg-letters', methods=['POST'])
+@login_required
 def generate_zbieg_letters():
     """Endpoint do generowania osobnych listów dla każdego komornika w przypadku zbiegu z szablonem HTML."""
     payload = request.get_json()
@@ -376,6 +558,8 @@ def generate_zbieg_letters():
         """
         
         try:
+            if user_instructions and user_instructions.strip():
+                specific_content += f'<p style="margin-top:16px; padding:12px; background:#fffde7; border-left:4px solid #f9a825; font-style:italic;"><strong>Uwagi dodatkowe:</strong> {user_instructions}</p>'
             generated_content = generate_letter_with_template(
                 content_type, sender_data, recipient_data, dane, specific_content
             )
@@ -583,6 +767,7 @@ def generate_letter_with_template(content_type, sender_data, recipient_data, cas
 
 
 @app.route('/generate-universal-letter', methods=['POST'])
+@login_required
 def generate_universal_letter():
     """Endpoint do generowania listów dla dowolnego typu pisma (nie-komorniczego)."""
     try:
@@ -593,7 +778,9 @@ def generate_universal_letter():
         subtype = payload.get('subtype', 'nieznane')
         fields = payload.get('fields', [])
         company = payload.get('company', '')
+        sender = payload.get('sender', None)
         scenario = payload.get('scenario', None)
+        user_instructions = payload.get('user_instructions', '')
 
         if not company:
             return jsonify({"error": "Wybierz spółkę"}), 400
@@ -603,12 +790,27 @@ def generate_universal_letter():
             subtype=subtype,
             extracted_fields=fields,
             company_name=company,
-            scenario=scenario
+            scenario=scenario,
+            user_instructions=user_instructions,
+            sender=sender
         )
+
+        ok, result = _check_letter_limit_and_save(
+            current_user,
+            title=f"Odpowiedź na pismo: {subtype}",
+            document_type=category,
+            subtype=subtype,
+            html_content=letter_html,
+            sender_name=company,
+            recipient_name="",
+        )
+        if not ok:
+            return result
 
         return jsonify({
             "list": letter_html,
-            "title": f"Odpowiedź na pismo: {subtype}"
+            "title": f"Odpowiedź na pismo: {subtype}",
+            "letter_id": result.id,
         })
 
     except Exception as e:
@@ -616,13 +818,217 @@ def generate_universal_letter():
 
 
 @app.route('/api/document-categories', methods=['GET'])
+@login_required
 def get_document_categories():
     """Zwraca listę kategorii dokumentów (do ewentualnego użycia w UI)."""
     from classifier import CATEGORIES
     return jsonify({"categories": list(CATEGORIES.keys())})
 
 
+# ── HISTORIA PISM ─────────────────────────────────────────────────────────────
+
+@app.route('/api/history', methods=['GET'])
+@login_required
+def get_history():
+    """Zwraca listę wygenerowanych pism zalogowanego użytkownika."""
+    try:
+        letters = (
+            GeneratedLetter.query
+            .filter_by(user_id=current_user.id)
+            .order_by(GeneratedLetter.created_at.desc())
+            .limit(100)
+            .all()
+        )
+        return jsonify({
+            "history": [
+                {
+                    "id": l.id,
+                    "title": l.title,
+                    "document_type": l.document_type,
+                    "subtype": l.subtype,
+                    "sender_name": l.sender_name,
+                    "recipient_name": l.recipient_name,
+                    "created_at": l.created_at.isoformat() if l.created_at else None,
+                    "has_pdf": bool(l.file_pdf),
+                    "has_doc": bool(l.file_doc),
+                }
+                for l in letters
+            ]
+        })
+    except Exception as e:
+        return jsonify({"error": f"Błąd pobierania historii: {str(e)}"}), 500
+
+
+@app.route('/api/history/<int:letter_id>', methods=['GET'])
+@login_required
+def get_history_item(letter_id):
+    """Zwraca pełne dane pisma wraz z html_content."""
+    try:
+        letter = orm_db.session.get(GeneratedLetter, letter_id)
+        if not letter or letter.user_id != current_user.id:
+            return jsonify({"error": "Pismo nie zostało znalezione."}), 404
+        return jsonify({"letter": letter.to_dict()})
+    except Exception as e:
+        return jsonify({"error": f"Błąd pobierania pisma: {str(e)}"}), 500
+
+
+@app.route('/api/history/<int:letter_id>', methods=['DELETE'])
+@login_required
+def delete_history_item(letter_id):
+    """Usuwa pismo z historii."""
+    try:
+        letter = orm_db.session.get(GeneratedLetter, letter_id)
+        if not letter or letter.user_id != current_user.id:
+            return jsonify({"error": "Pismo nie zostało znalezione."}), 404
+        orm_db.session.delete(letter)
+        orm_db.session.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        orm_db.session.rollback()
+        return jsonify({"error": f"Błąd usuwania pisma: {str(e)}"}), 500
+
+
+@app.route('/api/history/<int:letter_id>/download-pdf', methods=['POST'])
+@login_required
+def history_download_pdf(letter_id):
+    """Generuje i zwraca PDF z zapisanego pisma."""
+    try:
+        letter = orm_db.session.get(GeneratedLetter, letter_id)
+        if not letter or letter.user_id != current_user.id:
+            return jsonify({"error": "Pismo nie zostało znalezione."}), 404
+        safe_title = "".join(c if c.isalnum() or c in (' ', '-', '_') else '' for c in letter.title)[:60]
+        filename = f"{safe_title}.pdf"
+        return _generate_pdf_response(letter.html_content, filename)
+    except Exception as e:
+        return jsonify({"error": f"Błąd generowania PDF: {str(e)}"}), 500
+
+
+@app.route('/api/history/<int:letter_id>/download-doc', methods=['POST'])
+@login_required
+def history_download_doc(letter_id):
+    """Generuje i zwraca DOCX z zapisanego pisma."""
+    try:
+        letter = orm_db.session.get(GeneratedLetter, letter_id)
+        if not letter or letter.user_id != current_user.id:
+            return jsonify({"error": "Pismo nie zostało znalezione."}), 404
+        safe_title = "".join(c if c.isalnum() or c in (' ', '-', '_') else '' for c in letter.title)[:60]
+        filename = f"{safe_title}.docx"
+        return _generate_docx_response(letter.html_content, filename)
+    except Exception as e:
+        return jsonify({"error": f"Błąd generowania DOCX: {str(e)}"}), 500
+
+
+# ── Helpery generowania plików (reużywane przez endpointy i historię) ──────────
+
+CONVERTAPI_TOKEN = 'MX6Frilh3wiPvR3BvAwlbWCCRxPNLrGn'
+
+def _wrap_html_for_export(html_content, for_pdf=False):
+    """Opakowuje fragment HTML w pełny dokument HTML gotowy do konwersji."""
+    page_style = "@page { margin:2cm; size:A4; } " if for_pdf else ""
+    return f"""<!DOCTYPE html>
+<html lang="pl"><head><meta charset="UTF-8"><title>Pismo</title>
+<style>
+{page_style}
+body {{ font-family:"Times New Roman",serif; font-size:12pt; line-height:1.6;
+  margin:0; padding:20mm; background:white; color:black; }}
+.wrapper {{ max-width:180mm; margin:0 auto; }}
+div,p,span,strong,h1,h2,h3,h4,h5,h6 {{ background:transparent!important; }}
+</style></head><body><div class="wrapper">{html_content}</div></body></html>"""
+
+
+def _generate_docx_response(html_content, filename):
+    """Konwertuje HTML → DOCX przez ConvertAPI i zwraca jako send_file."""
+    optimized_html = _wrap_html_for_export(html_content)
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.html', mode='w', encoding='utf-8') as tmp:
+        tmp.write(optimized_html)
+        html_path = tmp.name
+    try:
+        with open(html_path, 'rb') as f:
+            resp = requests.post(
+                'https://v2.convertapi.com/convert/html/to/docx',
+                headers={'Authorization': f'Bearer {CONVERTAPI_TOKEN}'},
+                files={'File': f},
+                data={'StoreFile': 'true'},
+                timeout=60,
+            )
+        if resp.status_code != 200:
+            return jsonify({"error": f"Błąd ConvertAPI: {resp.text}"}), 500
+        docx_url = resp.json()['Files'][0]['Url']
+        docx_bytes = requests.get(docx_url, timeout=60).content
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_d:
+            tmp_d.write(docx_bytes)
+            docx_path = tmp_d.name
+        response = send_file(
+            docx_path, as_attachment=True, download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        )
+        @response.call_on_close
+        def _cleanup():
+            for p in (html_path, docx_path):
+                try: os.unlink(p)
+                except Exception: pass
+        return response
+    except Exception:
+        try: os.unlink(html_path)
+        except Exception: pass
+        raise
+
+
+def _generate_pdf_response(html_content, filename):
+    """Konwertuje HTML → DOCX → PDF przez ConvertAPI i zwraca jako send_file."""
+    optimized_html = _wrap_html_for_export(html_content, for_pdf=True)
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.html', mode='w', encoding='utf-8') as tmp:
+        tmp.write(optimized_html)
+        html_path = tmp.name
+    try:
+        with open(html_path, 'rb') as f:
+            resp = requests.post(
+                'https://v2.convertapi.com/convert/html/to/docx',
+                headers={'Authorization': f'Bearer {CONVERTAPI_TOKEN}'},
+                files={'File': f},
+                data={'StoreFile': 'true'},
+                timeout=60,
+            )
+        if resp.status_code != 200:
+            return jsonify({"error": f"Błąd ConvertAPI (HTML→DOCX): {resp.text}"}), 500
+        docx_url = resp.json()['Files'][0]['Url']
+        docx_bytes = requests.get(docx_url, timeout=60).content
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_d:
+            tmp_d.write(docx_bytes)
+            docx_path = tmp_d.name
+        with open(docx_path, 'rb') as f:
+            resp2 = requests.post(
+                'https://v2.convertapi.com/convert/docx/to/pdf',
+                headers={'Authorization': f'Bearer {CONVERTAPI_TOKEN}'},
+                files={'File': f},
+                data={'StoreFile': 'true'},
+                timeout=60,
+            )
+        if resp2.status_code != 200:
+            return jsonify({"error": f"Błąd ConvertAPI (DOCX→PDF): {resp2.text}"}), 500
+        pdf_url = resp2.json()['Files'][0]['Url']
+        pdf_bytes = requests.get(pdf_url, timeout=60).content
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_p:
+            tmp_p.write(pdf_bytes)
+            pdf_path = tmp_p.name
+        response = send_file(
+            pdf_path, as_attachment=True, download_name=filename,
+            mimetype='application/pdf',
+        )
+        @response.call_on_close
+        def _cleanup():
+            for p in (html_path, docx_path, pdf_path):
+                try: os.unlink(p)
+                except Exception: pass
+        return response
+    except Exception:
+        try: os.unlink(html_path)
+        except Exception: pass
+        raise
+
+
 @app.route('/download-pdf', methods=['POST'])
+@login_required
 def download_pdf():
     """Endpoint do pobierania listu w formacie PDF używając ConvertAPI (HTML->DOCX->PDF)"""
     try:
@@ -632,157 +1038,15 @@ def download_pdf():
         
         if not html_content:
             return jsonify({"error": "Brak treści HTML"}), 400
-        
-        # HTML zoptymalizowany pod konwersję do DOCX
-        optimized_html = f"""
-        <!DOCTYPE html>
-        <html lang="pl">
-        <head>
-            <meta charset="UTF-8">
-            <title>List do Komornika</title>
-            <style>
-                @page {{
-                    margin: 2cm;
-                    size: A4;
-                    background: white;
-                }}
-                * {{
-                    box-sizing: border-box;
-                }}
-                body {{
-                    font-family: "Times New Roman", serif;
-                    font-size: 12pt;
-                    line-height: 1.6;
-                    margin: 0;
-                    padding: 0;
-                    background: white !important;
-                    color: black !important;
-                    -webkit-print-color-adjust: exact;
-                    print-color-adjust: exact;
-                }}
-                .wrapper {{
-                    width: 100%;
-                    max-width: none;
-                    margin: 0;
-                    padding: 0;
-                    background: white !important;
-                }}
-                div, p, span, strong, h1, h2, h3, h4, h5, h6 {{
-                    background: transparent !important;
-                    background-color: transparent !important;
-                }}
-                .sender, .recipient, .date, .title, .content, .closing, .signature {{
-                    background: transparent !important;
-                    background-color: transparent !important;
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="wrapper">
-                {html_content}
-            </div>
-        </body>
-        </html>
-        """
-        
-        # Krok 1: Zapisz HTML do tymczasowego pliku
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.html', mode='w', encoding='utf-8') as tmp_html:
-            tmp_html.write(optimized_html)
-            html_path = tmp_html.name
-        
-        try:
-            # Krok 2: Konwertuj HTML do DOCX
-            with open(html_path, 'rb') as html_file:
-                docx_response = requests.post(
-                    'https://v2.convertapi.com/convert/html/to/docx',
-                    headers={
-                        'Authorization': 'Bearer GApx2nuOlCaqNCEhn8uY8KiS0RB0FeE6'
-                    },
-                    files={
-                        'File': html_file
-                    },
-                    data={
-                        'StoreFile': 'true'
-                    }
-                )
-            
-            if docx_response.status_code == 200:
-                docx_result = docx_response.json()
-                docx_url = docx_result['Files'][0]['Url']
-                
-                # Pobierz DOCX
-                docx_download = requests.get(docx_url)
-                if docx_download.status_code == 200:
-                    # Zapisz DOCX do tymczasowego pliku
-                    with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_docx:
-                        tmp_docx.write(docx_download.content)
-                        docx_path = tmp_docx.name
-                    
-                    # Krok 3: Konwertuj DOCX do PDF
-                    with open(docx_path, 'rb') as docx_file:
-                        pdf_response = requests.post(
-                            'https://v2.convertapi.com/convert/docx/to/pdf',
-                            headers={
-                                'Authorization': 'Bearer GApx2nuOlCaqNCEhn8uY8KiS0RB0FeE6'
-                            },
-                            files={
-                                'File': docx_file
-                            },
-                            data={
-                                'StoreFile': 'true'
-                            }
-                        )
-                    
-                    if pdf_response.status_code == 200:
-                        pdf_result = pdf_response.json()
-                        pdf_url = pdf_result['Files'][0]['Url']
-                        
-                        # Pobierz PDF
-                        pdf_download = requests.get(pdf_url)
-                        if pdf_download.status_code == 200:
-                            # Zapisz PDF do tymczasowego pliku
-                            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
-                                tmp_pdf.write(pdf_download.content)
-                                pdf_path = tmp_pdf.name
-                            
-                            response = send_file(
-                                pdf_path,
-                                as_attachment=True,
-                                download_name=filename,
-                                mimetype='application/pdf'
-                            )
-                            
-                            def remove_files(response):
-                                try:
-                                    os.unlink(html_path)
-                                    os.unlink(docx_path)
-                                    os.unlink(pdf_path)
-                                except Exception:
-                                    pass
-                                return response
-                            
-                            response.call_on_close(remove_files)
-                            return response
-                        else:
-                            return jsonify({"error": "Błąd pobierania PDF z ConvertAPI"}), 500
-                    else:
-                        return jsonify({"error": f"Błąd konwersji DOCX do PDF: {pdf_response.text}"}), 500
-                else:
-                    return jsonify({"error": "Błąd pobierania DOCX z ConvertAPI"}), 500
-            else:
-                return jsonify({"error": f"Błąd konwersji HTML do DOCX: {docx_response.text}"}), 500
-                
-        finally:
-            # Usuń tymczasowe pliki w przypadku błędu
-            try:
-                os.unlink(html_path)
-            except Exception:
-                pass
-        
+
+        return _generate_pdf_response(html_content, filename)
+
     except Exception as e:
         return jsonify({"error": f"Błąd przygotowania pliku PDF: {str(e)}"}), 500
 
+
 @app.route('/download-doc', methods=['POST'])
+@login_required
 def download_doc():
     """Endpoint do pobierania listu w formacie DOC używając ConvertAPI"""
     try:
@@ -792,103 +1056,15 @@ def download_doc():
         
         if not html_content:
             return jsonify({"error": "Brak treści HTML"}), 400
-        
-        # HTML zoptymalizowany pod konwersję do DOCX
-        optimized_html = f"""
-        <!DOCTYPE html>
-        <html lang="pl">
-        <head>
-            <meta charset="UTF-8">
-            <title>List do Komornika</title>
-            <style>
-                body {{
-                    font-family: "Times New Roman", serif;
-                    line-height: 1.6;
-                    margin: 0;
-                    padding: 20mm;
-                    background: white;
-                    color: black;
-                }}
-                .wrapper {{
-                    max-width: 180mm;
-                    margin: 0 auto;
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="wrapper">
-                {html_content}
-            </div>
-        </body>
-        </html>
-        """
-        
-        # Zapisz HTML do tymczasowego pliku
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.html', mode='w', encoding='utf-8') as tmp_html:
-            tmp_html.write(optimized_html)
-            html_path = tmp_html.name
-        
-        try:
-            # Wywołaj ConvertAPI
-            with open(html_path, 'rb') as html_file:
-                response = requests.post(
-                    'https://v2.convertapi.com/convert/html/to/docx',
-                    headers={
-                        'Authorization': 'Bearer GApx2nuOlCaqNCEhn8uY8KiS0RB0FeE6'
-                    },
-                    files={
-                        'File': html_file
-                    },
-                    data={
-                        'StoreFile': 'true'
-                    }
-                )
-            
-            if response.status_code == 200:
-                result = response.json()
-                docx_url = result['Files'][0]['Url']
-                
-                # Pobierz DOCX z URL
-                docx_response = requests.get(docx_url)
-                if docx_response.status_code == 200:
-                    # Zapisz DOCX do tymczasowego pliku
-                    with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_docx:
-                        tmp_docx.write(docx_response.content)
-                        docx_path = tmp_docx.name
-                    
-                    response = send_file(
-                        docx_path,
-                        as_attachment=True,
-                        download_name=filename,
-                        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-                    )
-                    
-                    def remove_files(response):
-                        try:
-                            os.unlink(html_path)
-                            os.unlink(docx_path)
-                        except Exception:
-                            pass
-                        return response
-                    
-                    response.call_on_close(remove_files)
-                    return response
-                else:
-                    return jsonify({"error": "Błąd pobierania DOCX z ConvertAPI"}), 500
-            else:
-                return jsonify({"error": f"Błąd ConvertAPI: {response.text}"}), 500
-                
-        finally:
-            # Usuń tymczasowy plik HTML w przypadku błędu
-            try:
-                os.unlink(html_path)
-            except Exception:
-                pass
-        
+
+        return _generate_docx_response(html_content, filename)
+
     except Exception as e:
         return jsonify({"error": f"Błąd przygotowania pliku DOC: {str(e)}"}), 500
 
+
 @app.route('/api/employee/<pesel>', methods=['GET'])
+@login_required
 def get_employee_by_pesel(pesel):
     """Endpoint do pobierania danych pracownika na podstawie PESEL"""
     try:
@@ -909,6 +1085,7 @@ def get_employee_by_pesel(pesel):
         return jsonify({"error": f"Błąd wyszukiwania pracownika: {str(e)}"}), 500
 
 @app.route('/api/bailiffs', methods=['GET'])
+@login_required
 def get_all_bailiffs():
     """Endpoint do pobierania listy wszystkich komorników"""
     try:
@@ -919,6 +1096,7 @@ def get_all_bailiffs():
         return jsonify({"error": f"Błąd pobierania komorników: {str(e)}"}), 500
 
 @app.route('/api/proceedings/<pesel>', methods=['GET'])
+@login_required
 def get_bailiff_proceedings(pesel):
     """Endpoint do pobierania postępowań komorniczych dla danego PESEL"""
     try:
@@ -934,6 +1112,7 @@ def get_bailiff_proceedings(pesel):
         return jsonify({"error": f"Błąd pobierania postępowań: {str(e)}"}), 500
 
 @app.route('/api/initialize-database', methods=['POST'])
+@login_required
 def initialize_database():
     """Endpoint do inicjalizacji bazy danych z danymi testowymi"""
     try:
@@ -944,6 +1123,7 @@ def initialize_database():
         return jsonify({"error": f"Błąd inicjalizacji bazy danych: {str(e)}"}), 500
 
 @app.route('/api/auto-detect-scenario', methods=['POST'])
+@login_required
 def auto_detect_scenario():
     """Endpoint do automatycznego wykrywania scenariusza na podstawie danych OCR"""
     try:
@@ -1008,6 +1188,7 @@ def auto_detect_scenario():
         return jsonify({"error": f"Błąd automatycznego wykrywania scenariusza: {str(e)}"}), 500
 
 @app.route('/api/add-bailiff', methods=['POST'])
+@login_required
 def add_bailiff():
     """Endpoint do dodawania nowego komornika"""
     try:
@@ -1046,6 +1227,7 @@ def add_bailiff():
         return jsonify({"error": f"Błąd dodawania komornika: {str(e)}"}), 500
 
 @app.route('/api/delete-bailiff', methods=['DELETE'])
+@login_required
 def delete_bailiff():
     """Endpoint do usuwania komornika"""
     try:
@@ -1079,6 +1261,7 @@ def delete_bailiff():
         return jsonify({"error": f"Błąd usuwania komornika: {str(e)}"}), 500
 
 @app.route('/api/test-connection', methods=['GET'])
+@login_required
 def test_connection():
     """Test endpoint do sprawdzenia połączenia"""
     import time
@@ -1090,6 +1273,7 @@ def test_connection():
     })
 
 @app.route('/api/update-bailiff', methods=['PUT'])
+@login_required
 def update_bailiff():
     """Endpoint do aktualizacji danych komornika"""
     try:
@@ -1156,6 +1340,217 @@ def update_bailiff():
     
     except Exception as e:
         return jsonify({"error": f"Błąd aktualizacji komornika: {str(e)}"}), 500
+
+# ── Zarządzanie nadawcami ────────────────────────────────────────────────────
+
+@app.route('/api/senders', methods=['GET'])
+@login_required
+def get_senders():
+    """Lista nadawców zalogowanego użytkownika"""
+    try:
+        senders = Sender.query.filter_by(user_id=current_user.id).order_by(Sender.nazwa).all()
+        return jsonify([s.to_dict() for s in senders])
+    except Exception as e:
+        return jsonify({"error": f"Błąd pobierania nadawców: {str(e)}"}), 500
+
+
+@app.route('/api/senders', methods=['POST'])
+@login_required
+def add_sender():
+    """Dodaj nowego nadawcę"""
+    try:
+        data = request.get_json()
+        if not data or not data.get('nazwa'):
+            return jsonify({"error": "Pole nazwa jest wymagane"}), 400
+        sender = Sender(
+            user_id=current_user.id,
+            nazwa=data.get('nazwa'),
+            adres=data.get('adres', ''),
+            miasto=data.get('miasto', ''),
+            kod_pocztowy=data.get('kod_pocztowy', ''),
+            telefon=data.get('telefon', ''),
+            email=data.get('email', '')
+        )
+        orm_db.session.add(sender)
+        orm_db.session.commit()
+        return jsonify(sender.to_dict()), 201
+    except Exception as e:
+        orm_db.session.rollback()
+        return jsonify({"error": f"Błąd dodawania nadawcy: {str(e)}"}), 500
+
+
+@app.route('/api/senders/<int:sender_id>', methods=['PUT'])
+@login_required
+def update_sender(sender_id):
+    """Edytuj nadawcę (tylko właściciela)"""
+    try:
+        sender = Sender.query.get(sender_id)
+        if not sender:
+            return jsonify({"error": "Nadawca nie istnieje"}), 404
+        if sender.user_id != current_user.id:
+            return jsonify({"error": "Brak uprawnień"}), 403
+        data = request.get_json()
+        if not data or not data.get('nazwa'):
+            return jsonify({"error": "Pole nazwa jest wymagane"}), 400
+        sender.nazwa = data.get('nazwa')
+        sender.adres = data.get('adres', sender.adres)
+        sender.miasto = data.get('miasto', sender.miasto)
+        sender.kod_pocztowy = data.get('kod_pocztowy', sender.kod_pocztowy)
+        sender.telefon = data.get('telefon', sender.telefon)
+        sender.email = data.get('email', sender.email)
+        orm_db.session.commit()
+        return jsonify(sender.to_dict())
+    except Exception as e:
+        orm_db.session.rollback()
+        return jsonify({"error": f"Błąd aktualizacji nadawcy: {str(e)}"}), 500
+
+
+@app.route('/api/senders/<int:sender_id>', methods=['DELETE'])
+@login_required
+def delete_sender(sender_id):
+    """Usuń nadawcę (tylko właściciela)"""
+    try:
+        sender = Sender.query.get(sender_id)
+        if not sender:
+            return jsonify({"error": "Nadawca nie istnieje"}), 404
+        if sender.user_id != current_user.id:
+            return jsonify({"error": "Brak uprawnień"}), 403
+        orm_db.session.delete(sender)
+        orm_db.session.commit()
+        return jsonify({"message": "Nadawca usunięty"})
+    except Exception as e:
+        orm_db.session.rollback()
+        return jsonify({"error": f"Błąd usuwania nadawcy: {str(e)}"}), 500
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# USTAWIENIA UŻYTKOWNIKA
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route('/api/settings/profile', methods=['GET'])
+@login_required
+def settings_profile():
+    """Zwróć dane profilu zalogowanego użytkownika."""
+    try:
+        return jsonify({
+            "display_name": current_user.display_name,
+            "email": current_user.email,
+            "plan": current_user.plan,
+            "letters_used": current_user.letters_used,
+            "letters_limit": current_user.letters_limit,
+            "theme": current_user.theme,
+            "email_notifications": current_user.email_notifications,
+            "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
+            "last_login": current_user.last_login.isoformat() if current_user.last_login else None,
+        })
+    except Exception as e:
+        return jsonify({"error": f"Błąd pobierania profilu: {str(e)}"}), 500
+
+
+@app.route('/api/settings/display-name', methods=['POST'])
+@login_required
+def settings_display_name():
+    """Zmień wyświetlaną nazwę użytkownika."""
+    try:
+        data = request.get_json(silent=True) or {}
+        display_name = (data.get('display_name') or '').strip()
+
+        if len(display_name) < 2:
+            return jsonify({"error": "Nazwa musi mieć co najmniej 2 znaki"}), 400
+        if len(display_name) > 50:
+            return jsonify({"error": "Nazwa może mieć maksymalnie 50 znaków"}), 400
+
+        current_user.display_name = display_name
+        orm_db.session.commit()
+        return jsonify({"success": True, "display_name": display_name})
+    except Exception as e:
+        orm_db.session.rollback()
+        return jsonify({"error": f"Błąd zapisu nazwy: {str(e)}"}), 500
+
+
+@app.route('/api/settings/change-password', methods=['POST'])
+@login_required
+def settings_change_password():
+    """Zmień hasło użytkownika – wymaga podania aktualnego hasła."""
+    try:
+        from werkzeug.security import check_password_hash, generate_password_hash
+
+        data = request.get_json(silent=True) or {}
+        current_password = data.get('current_password', '')
+        new_password = data.get('new_password', '')
+        confirm_password = data.get('confirm_password', '')
+
+        if not check_password_hash(current_user.password_hash, current_password):
+            return jsonify({"error": "Aktualne hasło jest nieprawidłowe"}), 400
+
+        if len(new_password) < 8:
+            return jsonify({"error": "Nowe hasło musi mieć co najmniej 8 znaków"}), 400
+        if not any(c.isdigit() for c in new_password):
+            return jsonify({"error": "Nowe hasło musi zawierać co najmniej jedną cyfrę"}), 400
+        if new_password != confirm_password:
+            return jsonify({"error": "Hasła nie są identyczne"}), 400
+
+        current_user.password_hash = generate_password_hash(new_password)
+        orm_db.session.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        orm_db.session.rollback()
+        return jsonify({"error": f"Błąd zmiany hasła: {str(e)}"}), 500
+
+
+@app.route('/api/settings/theme', methods=['POST'])
+@login_required
+def settings_theme():
+    """Zapisz preferowany motyw (light/dark)."""
+    try:
+        data = request.get_json(silent=True) or {}
+        theme = data.get('theme', '')
+
+        if theme not in ('light', 'dark'):
+            return jsonify({"error": "Dozwolone wartości: light, dark"}), 400
+
+        current_user.theme = theme
+        orm_db.session.commit()
+        return jsonify({"success": True, "theme": theme})
+    except Exception as e:
+        orm_db.session.rollback()
+        return jsonify({"error": f"Błąd zapisu motywu: {str(e)}"}), 500
+
+
+@app.route('/api/settings/notifications', methods=['POST'])
+@login_required
+def settings_notifications():
+    """Włącz lub wyłącz powiadomienia e-mail."""
+    try:
+        data = request.get_json(silent=True) or {}
+        value = data.get('email_notifications')
+
+        if not isinstance(value, bool):
+            return jsonify({"error": "Pole email_notifications musi być true lub false"}), 400
+
+        current_user.email_notifications = value
+        orm_db.session.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        orm_db.session.rollback()
+        return jsonify({"error": f"Błąd zapisu ustawień powiadomień: {str(e)}"}), 500
+
+
+@app.route('/api/settings/plans', methods=['GET'])
+@login_required
+def settings_plans():
+    """Zwróć listę dostępnych planów z oznaczeniem aktywnego planu użytkownika."""
+    try:
+        plans = Plan.query.order_by(Plan.price).all()
+        result = []
+        for p in plans:
+            d = p.to_dict()
+            d['is_current'] = (p.name == current_user.plan)
+            result.append(d)
+        return jsonify({"plans": result, "current_plan": current_user.plan})
+    except Exception as e:
+        return jsonify({"error": f"Błąd pobierania planów: {str(e)}"}), 500
+
 
 if __name__ == '__main__':
     # Inicjalizuj bazę danych przy starcie aplikacji

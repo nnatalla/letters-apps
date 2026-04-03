@@ -1,0 +1,439 @@
+﻿<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Logowanie | Procesor Pism</title>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            min-height: 100vh;
+            font-family: Arial, Helvetica, sans-serif;
+            background: linear-gradient(135deg, #0f4c81 0%, #1976d2 50%, #42a5f5 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .panel {
+            width: 100%;
+            max-width: 440px;
+            background: #ffffff;
+            border-radius: 18px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.20);
+            padding: 36px 32px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .logo h1 {
+            font-size: 26px;
+            color: #0f4c81;
+            font-weight: 800;
+        }
+
+        .logo p {
+            font-size: 13px;
+            color: #5a7b9e;
+            margin-top: 4px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            color: #0f4c81;
+            margin-bottom: 6px;
+            margin-top: 14px;
+        }
+
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid #c8d8ea;
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color .2s;
+        }
+
+        input:focus {
+            border-color: #1976d2;
+            box-shadow: 0 0 0 3px rgba(25,118,210,.12);
+        }
+
+        input.input-error {
+            border-color: #e53935;
+            box-shadow: 0 0 0 3px rgba(229,57,53,.10);
+        }
+
+        .btn-primary {
+            width: 100%;
+            margin-top: 20px;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #1976d2, #42a5f5);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity .2s;
+        }
+
+        .btn-primary:hover { opacity: .88; }
+        .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+
+        .btn-secondary {
+            width: 100%;
+            margin-top: 10px;
+            padding: 11px;
+            border: 1.5px solid #1976d2;
+            border-radius: 10px;
+            background: #eef5fc;
+            color: #0f4c81;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity .2s;
+        }
+
+        .btn-secondary:disabled { opacity: .55; cursor: not-allowed; }
+
+        .link-btn {
+            background: none;
+            border: none;
+            color: #1976d2;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: block;
+            text-align: center;
+            width: 100%;
+            margin-top: 14px;
+            padding: 4px;
+        }
+
+        .link-btn:hover { text-decoration: underline; }
+
+        .hidden { display: none; }
+
+        #registerSection {
+            border-top: 1.5px solid #e3edf7;
+            margin-top: 20px;
+            padding-top: 20px;
+        }
+
+        .register-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: #0f4c81;
+            margin-bottom: 2px;
+        }
+
+        /* Wskazówki siły hasła */
+        .password-hints {
+            margin-top: 8px;
+            padding: 10px 12px;
+            background: #f0f6ff;
+            border-radius: 8px;
+            border: 1px solid #c8d8ea;
+            font-size: 12px;
+        }
+
+        .hint {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 0;
+            color: #8aabca;
+            transition: color .2s;
+        }
+
+        .hint.ok { color: #2e7d32; }
+        .hint.ok::before { content: "✓"; font-weight: 700; }
+        .hint:not(.ok)::before { content: "○"; }
+
+        .msg {
+            margin-top: 14px;
+            padding: 11px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .msg.ok  { background: #e8f5e9; color: #2e7d32; }
+        .msg.err { background: #ffebee; color: #c62828; }
+        .msg.info { background: #e3f2fd; color: #0f4c81; }
+    </style>
+</head>
+<body>
+<div class="panel">
+    <div class="logo">
+        <h1>Procesor Pism</h1>
+        <p>System przetwarzania pism przez OCR + AI</p>
+    </div>
+
+    <!-- LOGOWANIE -->
+    <form id="loginForm">
+        <label for="loginEmail">Email</label>
+        <input id="loginEmail" type="email" placeholder="twoj@email.pl" required />
+
+        <label for="loginPassword">Hasło</label>
+        <input id="loginPassword" type="password" placeholder="••••••••" required />
+
+        <button type="submit" class="btn-primary">Zaloguj się</button>
+    </form>
+
+    <button id="toggleRegister" class="link-btn">Nie masz konta? Zarejestruj się</button>
+
+    <!-- REJESTRACJA (ukryta) -->
+    <div id="registerSection" class="hidden">
+        <p class="register-title">Nowe konto</p>
+        <form id="registerForm" novalidate>
+            <label for="regEmail">Email</label>
+            <input id="regEmail" type="email" placeholder="twoj@email.pl" required />
+
+            <label for="regPassword">Hasło</label>
+            <input id="regPassword" type="password" placeholder="••••••••" autocomplete="new-password" />
+
+            <!-- Wskazówki siły hasła -->
+            <div class="password-hints" id="passwordHints">
+                <div class="hint" id="hint-len">min. 8 znaków</div>
+                <div class="hint" id="hint-upper">co najmniej jedna wielka litera (A–Z)</div>
+                <div class="hint" id="hint-special">co najmniej jeden znak specjalny (!@#$...)</div>
+            </div>
+
+            <label for="regPassword2">Powtórz hasło</label>
+            <input id="regPassword2" type="password" placeholder="••••••••" autocomplete="new-password" />
+
+            <button type="submit" class="btn-secondary" id="regSubmitBtn">Utwórz konto</button>
+        </form>
+    </div>
+
+    <!-- Ponowne wysłanie linku aktywacyjnego (ukryte domyślnie, poza sekcją rejestracji) -->
+    <div id="resendSection" class="hidden" style="margin-top: 14px; padding: 14px; background: #fff8e1; border: 1.5px solid #ffcc02; border-radius: 10px;">
+        <p style="font-size: 13px; color: #6d5b00; margin-bottom: 10px;">To konto nie zostało jeszcze aktywowane. Kliknij poniżej, aby otrzymać nowy link aktywacyjny.</p>
+        <button type="button" class="btn-secondary" id="resendBtn" style="margin-top:0;">📧 Wyślij ponownie link aktywacyjny</button>
+    </div>
+
+    <div id="msgBox"></div>
+</div>
+
+<script>
+    (function () {
+        emailjs.init({ publicKey: 'hWOLAylbHH9al6u9a', privateKey: 'p_VC9s3sbxQUum2GiqvHJ' });
+    })();
+
+    const EMAILJS_SERVICE_ID  = 'letters_office';
+    const EMAILJS_TEMPLATE_ID = 'letters_activate';
+
+    const toggleBtn       = document.getElementById('toggleRegister');
+    const registerSection = document.getElementById('registerSection');
+    const resendSection   = document.getElementById('resendSection');
+    const resendBtn       = document.getElementById('resendBtn');
+    const msgBox          = document.getElementById('msgBox');
+    const regPassword     = document.getElementById('regPassword');
+    const regPassword2    = document.getElementById('regPassword2');
+    let resendEmail       = '';
+
+    function msg(text, type) {
+        msgBox.innerHTML = `<div class="msg ${type}">${text}</div>`;
+    }
+
+    // ─── Przełącznik sekcji rejestracji ───────────────────
+    toggleBtn.addEventListener('click', () => {
+        const visible = !registerSection.classList.contains('hidden');
+        registerSection.classList.toggle('hidden', visible);
+        toggleBtn.textContent = visible
+            ? 'Nie masz konta? Zarejestruj się'
+            : 'Masz już konto? Zaloguj się';
+        msgBox.innerHTML = '';
+    });
+
+    // ─── Wskazówki siły hasła (live) ─────────────────────
+    regPassword.addEventListener('input', updateHints);
+
+    function updateHints() {
+        const val = regPassword.value;
+        setHint('hint-len',     val.length >= 8);
+        setHint('hint-upper',   /[A-Z]/.test(val));
+        setHint('hint-special', /[!@#$%^&*()\-_=+\[\]{};:'",.<>?/\\|`~]/.test(val));
+    }
+
+    function setHint(id, ok) {
+        const el = document.getElementById(id);
+        el.classList.toggle('ok', ok);
+    }
+
+    function passwordValid(val) {
+        return val.length >= 8
+            && /[A-Z]/.test(val)
+            && /[!@#$%^&*()\-_=+\[\]{};:'",.<>?/\\|`~]/.test(val);
+    }
+
+    // ─── Logowanie ────────────────────────────────────────
+    document.getElementById('loginForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        const btn = e.target.querySelector('button');
+        btn.disabled = true;
+        btn.textContent = '...';
+        try {
+            const res = await fetch('/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email:    document.getElementById('loginEmail').value.trim(),
+                    password: document.getElementById('loginPassword').value
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                window.location.href = '/';
+            } else {
+                msg(data.message || 'Błąd logowania.', 'err');
+                if (data.inactive) {
+                    resendEmail = document.getElementById('loginEmail').value.trim();
+                    resendSection.classList.remove('hidden');
+                } else {
+                    resendSection.classList.add('hidden');
+                }
+            }
+        } catch {
+            msg('Nie udało się połączyć z serwerem.', 'err');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Zaloguj się';
+        }
+    });
+
+    // ─── Rejestracja ─────────────────────────────────────
+    document.getElementById('registerForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        msgBox.innerHTML = '';
+
+        const email  = document.getElementById('regEmail').value.trim();
+        const pass1  = regPassword.value;
+        const pass2  = regPassword2.value;
+
+        // Walidacja po stronie klienta
+        if (!email) { msg('Podaj adres email.', 'err'); return; }
+        if (!passwordValid(pass1)) {
+            msg('Hasło nie spełnia wymagań (patrz wskazówki poniżej pola).', 'err');
+            regPassword.classList.add('input-error');
+            return;
+        }
+        regPassword.classList.remove('input-error');
+        if (pass1 !== pass2) {
+            msg('Hasła nie są identyczne.', 'err');
+            regPassword2.classList.add('input-error');
+            return;
+        }
+        regPassword2.classList.remove('input-error');
+
+        const btn = document.getElementById('regSubmitBtn');
+        btn.disabled = true;
+        btn.textContent = 'Tworzę konto...';
+
+        try {
+            const res = await fetch('/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password: pass1, password2: pass2 })
+            });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                msg(data.message || 'Błąd rejestracji.', 'err');
+                if (data.inactive) {
+                    resendEmail = email;
+                    resendSection.classList.remove('hidden');
+                } else {
+                    resendSection.classList.add('hidden');
+                }
+                return;
+            }
+            resendSection.classList.add('hidden');
+
+            // Wyślij email aktywacyjny przez EmailJS
+            btn.textContent = 'Wysyłam email...';
+            try {
+                await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+                    email:            data.email,
+                    activation_link:  data.activation_link
+                });
+            } catch (emailErr) {
+                console.error('EmailJS error:', emailErr);
+                // Rejestracja się udała - email to błąd drugorzędny
+                msg('Konto utworzone, ale nie udało się wysłać emaila aktywacyjnego. Skontaktuj się z administratorem.', 'err');
+                document.getElementById('registerForm').reset();
+                updateHints();
+                return;
+            }
+
+            msg('✓ Konto zostało utworzone! Sprawdź skrzynkę email (' + data.email + ') i kliknij link aktywacyjny.', 'ok');
+            document.getElementById('registerForm').reset();
+            updateHints();
+            registerSection.classList.add('hidden');
+            toggleBtn.textContent = 'Nie masz konta? Zarejestruj się';
+
+        } catch {
+            msg('Nie udało się połączyć z serwerem.', 'err');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Utwórz konto';
+        }
+    });
+
+    // ─── Ponowne wysłanie linku aktywacyjnego ─────────────
+    resendBtn.addEventListener('click', async () => {
+        if (!resendEmail) return;
+        resendBtn.disabled = true;
+        resendBtn.textContent = 'Wysyłam...';
+        msgBox.innerHTML = '';
+
+        try {
+            const res = await fetch('/auth/resend-activation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: resendEmail })
+            });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                msg(data.message || 'Nie udało się wygenerować linku.', 'err');
+                return;
+            }
+
+            // Wyślij email przez EmailJS
+            resendBtn.textContent = 'Wysyłam email...';
+            try {
+                await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+                    email:           data.email,
+                    activation_link: data.activation_link
+                });
+            } catch (emailErr) {
+                console.error('EmailJS resend error:', emailErr);
+                msg('Link wygenerowany, ale nie udało się wysłać emaila. Skontaktuj się z administratorem.', 'err');
+                return;
+            }
+
+            msg('✓ Nowy link aktywacyjny został wysłany na ' + data.email + '. Sprawdź skrzynkę email.', 'ok');
+            resendSection.classList.add('hidden');
+        } catch {
+            msg('Nie udało się połączyć z serwerem.', 'err');
+        } finally {
+            resendBtn.disabled = false;
+            resendBtn.textContent = '📧 Wyślij ponownie link aktywacyjny';
+        }
+    });
+</script>
+</body>
+</html>
