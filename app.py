@@ -1,4 +1,6 @@
 ﻿import os
+import sys
+from pathlib import Path
 import requests
 import json
 import mimetypes
@@ -14,12 +16,32 @@ from datetime import datetime
 from database import DatabaseManager
 from models import init_db, db as orm_db, populate_test_data, Sender, GeneratedLetter, Plan
 from auth import auth_bp
+from ocr_utils import resolve_poppler_path, resolve_tesseract_cmd
+
+# Wymuszenie UTF-8 na stdout (Windows cp1250 nie obsługuje emoji)
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 
+BASE_DIR = Path(__file__).resolve().parent
+
+
+def load_environment_files():
+    load_dotenv(BASE_DIR / '.env')
+    if (os.getenv('FLASK_ENV') or '').strip().lower() == 'production':
+        for candidate in (BASE_DIR / '.env.production.new', BASE_DIR / '.env.production'):
+            if candidate.exists():
+                load_dotenv(candidate, override=True)
+                break
+
+
 # Load environment variables
-load_dotenv()
+load_environment_files()
 
 # Production/Development environment detection
 is_production = os.getenv('FLASK_ENV') == 'production'
@@ -27,14 +49,14 @@ is_production = os.getenv('FLASK_ENV') == 'production'
 if is_production:
     # Production configuration
     load_dotenv('.env.production')
-    pytesseract.pytesseract.tesseract_cmd = os.getenv('TESSERACT_CMD', '/usr/bin/tesseract')
-    poppler_path = os.getenv('POPPLER_PATH', '/usr/bin')
+    pytesseract.pytesseract.tesseract_cmd = resolve_tesseract_cmd()
+    poppler_path = resolve_poppler_path()
     UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', '/opt/avalon/temp_uploads')
     DATABASE_PATH = os.getenv('DATABASE_PATH', '/opt/avalon/avalon_system.db')
 else:
     # Development configuration
-    pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
-    poppler_path = r"C:\Poppler\poppler-23.01.0\Library\bin"
+    pytesseract.pytesseract.tesseract_cmd = resolve_tesseract_cmd()
+    poppler_path = resolve_poppler_path() or r"C:\Poppler\poppler-23.01.0\Library\bin"
     UPLOAD_FOLDER = os.path.join(os.path.expanduser('~'), 'temp_uploads')
     DATABASE_PATH = 'avalon_system.db'
 
@@ -84,6 +106,7 @@ with app.app_context():
         ("users", "theme",                   "VARCHAR(10) NOT NULL DEFAULT 'light'"),
         ("users", "email_notifications",     "BOOLEAN NOT NULL DEFAULT 1"),
         ("users", "last_login",              "DATETIME"),
+        ("senders", "kategoria",             "VARCHAR(100)"),
     ]
     try:
         from sqlalchemy import text as _text
@@ -119,19 +142,32 @@ with app.app_context():
 # ─────────────────────────────────────────────────────────────
 
 # Klucze API
-GROQ_API_KEY = os.getenv('GROQ_API_KEY')
+GROQ_API_KEY = (os.getenv('GROQ_API_KEY') or '').strip().strip('"').strip("'")
 if not GROQ_API_KEY:
     print("BŁĄD: Klucz API Groq nie został znaleziony! Upewnij się, że jest w pliku .env")
+elif len(GROQ_API_KEY) < 20:
+    print("BŁĄD: Klucz API Groq wygląda na nieprawidłowy lub niepełny.")
 
 # Endpointy API
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 @app.route('/login')
 def login_page():
-    """Strona logowania."""
+    """Strona logowania — serwuje landing page z wbudowanym modałem logowania."""
     if current_user.is_authenticated:
         return redirect(url_for('serve_index'))
-    return render_template('login.html')
+    response = send_from_directory('.', 'landing.html')
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    return response
+
+@app.route('/register')
+def register_page():
+    """Strona rejestracji — serwuje landing page z otwartym modałem rejestracji."""
+    if current_user.is_authenticated:
+        return redirect(url_for('serve_index'))
+    response = send_from_directory('.', 'landing.html')
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    return response
 
 @app.route('/')
 @login_required
@@ -189,13 +225,8 @@ def process_file():
         from pdf2image import convert_from_path
         from orchestrator import process_document
 
-        is_production = os.getenv('FLASK_ENV') == 'production'
-        if is_production:
-            pytesseract.pytesseract.tesseract_cmd = os.getenv('TESSERACT_CMD', '/usr/bin/tesseract')
-            poppler_path = os.getenv('POPPLER_PATH', '/usr/bin')
-        else:
-            pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
-            poppler_path = r'C:\Poppler\poppler-23.01.0\Library\bin'
+        pytesseract.pytesseract.tesseract_cmd = resolve_tesseract_cmd()
+        poppler_path = resolve_poppler_path() or r'C:\Poppler\poppler-23.01.0\Library\bin'
 
         file_extension = os.path.splitext(safe_name)[1].lower()
         ocr_text = ''
@@ -288,7 +319,7 @@ def extract_data_with_groq(ocr_text):
     """
     
     headers = {
-        "Authorization": f"Bearer {os.getenv('GROQ_API_KEY')}",
+        "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
     }
     
@@ -313,7 +344,14 @@ def extract_data_with_groq(ocr_text):
         
         return json.loads(cleaned_json_string)
     except requests.exceptions.HTTPError as e:
-        raise ValueError(f"Błąd HTTP podczas ekstrakcji danych (Groq): {e.response.status_code} - {e.response.text}") from e
+        status_code = getattr(e.response, 'status_code', None)
+        response_text = getattr(e.response, 'text', '')
+        if status_code == 401:
+            raise ValueError(
+                "Autoryzacja Groq odrzucona (401). Sprawdź wartość GROQ_API_KEY w pliku .env, "
+                "czy nie ma spacji/cudzysłowów i czy klucz jest aktywny."
+            ) from e
+        raise ValueError(f"Błąd HTTP podczas ekstrakcji danych (Groq): {status_code} - {response_text}") from e
     except requests.exceptions.RequestException as e:
         raise ValueError(f"Błąd komunikacji z Groq AI: {e}") from e
     except (json.JSONDecodeError, KeyError) as e:
@@ -922,18 +960,61 @@ def history_download_doc(letter_id):
 
 CONVERTAPI_TOKEN = 'MX6Frilh3wiPvR3BvAwlbWCCRxPNLrGn'
 
+def _extract_letter_body(html_content):
+    """Ekstrahuje czystą treść listu (bez screen-only wrapperów i stylów)."""
+    import re as _re
+
+    # Zamień flex-spacers na zwykłe marginesy przed parseowaniem
+    content = html_content
+    content = content.replace('<div style="flex: 1.5"></div>', '<div style="height:40px"></div>')
+    content = content.replace('<div style="flex: 1"></div>', '<div style="height:20px"></div>')
+
+    # Przypadek 1: pełny dokument HTML (komornicze — szablon komornik.html)
+    if _re.search(r'<!DOCTYPE|<html\b', content, _re.IGNORECASE):
+        m = _re.search(r'<body[^>]*>([\s\S]*?)</body>', content, _re.IGNORECASE)
+        if m:
+            return m.group(1).strip()
+        return content
+
+    # Przypadek 2: fragment z <style>...<div class="a4-frame"><div class="wrapper">
+    # Usuń blok <style>
+    content = _re.sub(r'<style[\s\S]*?</style>', '', content, flags=_re.IGNORECASE).strip()
+
+    # Usuń otwierający tag .a4-frame i zamykający go </div> na końcu
+    content = _re.sub(r'^\s*<div\s[^>]*class="a4-frame"[^>]*>\s*', '', content)
+    # Usuń ostatni </div> (zamknięcie .a4-frame)
+    content = _re.sub(r'\s*</div>\s*$', '', content)
+
+    # Zostawia .wrapper div wewnątrz — to jest potrzebne dla zachowania klas CSS
+    return content.strip()
+
+
 def _wrap_html_for_export(html_content, for_pdf=False):
-    """Opakowuje fragment HTML w pełny dokument HTML gotowy do konwersji."""
-    page_style = "@page { margin:2cm; size:A4; } " if for_pdf else ""
+    """Opakowuje treść listu w pełny dokument HTML gotowy do konwersji na DOCX/PDF."""
+    body_content = _extract_letter_body(html_content)
+    page_style = "@page { margin:2cm 2.5cm; size:A4; } " if for_pdf else ""
     return f"""<!DOCTYPE html>
 <html lang="pl"><head><meta charset="UTF-8"><title>Pismo</title>
 <style>
 {page_style}
 body {{ font-family:"Times New Roman",serif; font-size:12pt; line-height:1.6;
-  margin:0; padding:20mm; background:white; color:black; }}
-.wrapper {{ max-width:180mm; margin:0 auto; }}
-div,p,span,strong,h1,h2,h3,h4,h5,h6 {{ background:transparent!important; }}
-</style></head><body><div class="wrapper">{html_content}</div></body></html>"""
+  margin:0; padding:2cm 2.5cm; background:white; color:black; }}
+/* Reset layoutu ekranowego — Word nie obsługuje flex */
+.a4-frame {{ display:block!important; background:white!important; padding:0!important; }}
+.wrapper {{ display:block!important; width:auto!important; min-height:0!important;
+  padding:0!important; background:white!important; box-shadow:none!important; }}
+/* Kolory i tła */
+div,p,span,strong,em,h1,h2,h3,h4,h5,h6,table,td,tr {{ background:transparent!important; color:black!important; }}
+/* Elementy listu */
+.date {{ text-align:right; margin-bottom:24px; }}
+.sender {{ margin-bottom:48px; }}
+.recipient {{ text-align:right; margin-bottom:24px; }}
+.title {{ text-align:center; font-weight:bold; text-transform:uppercase; margin:0 0 28px; }}
+.content {{ text-align:justify; }}
+.content p {{ margin:0 0 10px; }}
+.closing {{ margin-top:28px; }}
+.signature {{ margin-top:48px; font-weight:bold; }}
+</style></head><body>{body_content}</body></html>"""
 
 
 def _generate_docx_response(html_content, filename):
@@ -1369,7 +1450,8 @@ def add_sender():
             miasto=data.get('miasto', ''),
             kod_pocztowy=data.get('kod_pocztowy', ''),
             telefon=data.get('telefon', ''),
-            email=data.get('email', '')
+            email=data.get('email', ''),
+            kategoria=data.get('kategoria', '')
         )
         orm_db.session.add(sender)
         orm_db.session.commit()
@@ -1398,6 +1480,7 @@ def update_sender(sender_id):
         sender.kod_pocztowy = data.get('kod_pocztowy', sender.kod_pocztowy)
         sender.telefon = data.get('telefon', sender.telefon)
         sender.email = data.get('email', sender.email)
+        sender.kategoria = data.get('kategoria', sender.kategoria)
         orm_db.session.commit()
         return jsonify(sender.to_dict())
     except Exception as e:

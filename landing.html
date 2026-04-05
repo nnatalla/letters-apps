@@ -235,6 +235,38 @@ footer{background:var(--bg2);border-top:1px solid var(--border2);padding:50px 5%
 .demo-step-num{font-size:.7rem;font-weight:800;color:var(--blue2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
 .demo-step h4{font-size:.9rem;margin-bottom:4px}
 .demo-step p{color:var(--text2);font-size:.8rem;line-height:1.5}
+
+/* AUTH MODAL */
+.auth-modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:2000;align-items:center;justify-content:center;padding:20px}
+.auth-modal-backdrop.open{display:flex}
+.auth-modal{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:36px 32px;width:100%;max-width:440px;position:relative;animation:modal-in .25s ease}
+@keyframes modal-in{from{opacity:0;transform:translateY(-18px) scale(.97)}to{opacity:1;transform:none}}
+.auth-modal-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--text2);font-size:1.3rem;cursor:pointer;transition:color .2s;line-height:1}
+.auth-modal-close:hover{color:var(--text)}
+.auth-logo{text-align:center;margin-bottom:24px}
+.auth-logo h2{font-family:'Sora',sans-serif;font-size:1.5rem;font-weight:800;color:var(--text);margin-bottom:4px}
+.auth-logo p{color:var(--text2);font-size:.875rem}
+.auth-tabs{display:flex;gap:4px;background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:12px;padding:4px;margin-bottom:24px}
+.auth-tab{flex:1;padding:8px;border:none;background:none;color:var(--text2);border-radius:8px;cursor:pointer;font-size:.875rem;font-weight:600;transition:all .2s;font-family:'Inter',sans-serif}
+.auth-tab.active{background:var(--blue);color:#fff;box-shadow:0 2px 12px rgba(59,130,246,.35)}
+.auth-form{display:none}
+.auth-form.active{display:block}
+.auth-field{margin-bottom:16px}
+.auth-field label{display:block;font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
+.auth-field input{width:100%;padding:11px 14px;background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s;font-family:'Inter',sans-serif}
+.auth-field input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.auth-btn{width:100%;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;transition:all .2s;font-family:'Inter',sans-serif}
+.auth-btn:hover:not(:disabled){background:#2563eb;transform:translateY(-1px);box-shadow:0 6px 20px rgba(59,130,246,.35)}
+.auth-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.auth-msg{margin-top:14px;padding:10px 14px;border-radius:8px;font-size:.875rem;display:none;line-height:1.5}
+.auth-msg.error{display:block;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#fca5a5}
+.auth-msg.success{display:block;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:#86efac}
+.auth-switch{text-align:center;margin-top:16px;font-size:.875rem;color:var(--text2)}
+.auth-switch a{color:var(--blue2);cursor:pointer;font-weight:600}
+.auth-switch a:hover{text-decoration:underline}
+.pass-hint{font-size:.75rem;color:var(--text3);margin-top:5px;line-height:1.4}
+.nav-login-link{color:var(--text2);text-decoration:none;font-size:.9rem;transition:color .2s;margin-right:4px}
+.nav-login-link:hover{color:var(--text)}
 </style>
 </head>
 <body>
@@ -247,7 +279,8 @@ footer{background:var(--bg2);border-top:1px solid var(--border2);padding:50px 5%
     <a href="#cennik">Cennik</a>
     <a href="#faq">FAQ</a>
   </div>
-  <a href="/register" class="nav-cta">Zacznij za darmo →</a>
+  <a href="#" onclick="openAuthModal('login'); return false;" class="nav-login-link">Zaloguj się</a>
+  <a href="#" onclick="openAuthModal('register'); return false;" class="nav-cta">Zacznij za darmo →</a>
   <button class="hamburger" onclick="toggleMenu()" aria-label="Menu">
     <span></span><span></span><span></span>
   </button>
@@ -262,7 +295,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border2);padding:50px 5%
       <h1>Koniec ze stresem od pism <span class="accent">urzędowych</span></h1>
       <p class="hero-sub">Wgraj pismo. AI je przeczyta, rozpozna i napisze profesjonalną odpowiedź gotową do wysłania — w 60 sekund.</p>
       <div class="hero-actions">
-        <a href="/register" class="btn-primary">Zacznij za darmo →</a>
+        <a href="#" onclick="openAuthModal('register'); return false;" class="btn-primary">Zacznij za darmo →</a>
         <button class="btn-ghost" onclick="openDemo()">▶ Zobacz demo</button>
       </div>
       <div class="social-proof">
@@ -455,7 +488,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border2);padding:50px 5%
           <li>Zarządzanie nadawcami</li>
           <li>Wsparcie e-mail</li>
         </ul>
-        <a href="/register" class="plan-btn outline">Zacznij za darmo</a>
+        <a href="#" onclick="openAuthModal('register'); return false;" class="plan-btn outline">Zacznij za darmo</a>
       </div>
       <div class="plan-card popular">
         <div class="plan-pop-badge">⭐ NAJPOPULARNIEJSZY</div>
@@ -473,7 +506,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border2);padding:50px 5%
           <li>Wsparcie priorytetowe</li>
           <li>Instrukcje głosowe</li>
         </ul>
-        <a href="/register" class="plan-btn filled">Wybierz Plan M →</a>
+        <a href="#" onclick="openAuthModal('register'); return false;" class="plan-btn filled">Wybierz Plan M →</a>
       </div>
       <div class="plan-card">
         <div class="plan-name">Plan L</div>
@@ -490,7 +523,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border2);padding:50px 5%
           <li>Dedykowany opiekun</li>
           <li>SLA 99.9% uptime</li>
         </ul>
-        <a href="/register" class="plan-btn outline">Wybierz Plan L</a>
+        <a href="#" onclick="openAuthModal('register'); return false;" class="plan-btn outline">Wybierz Plan L</a>
       </div>
     </div>
     <p style="text-align:center;color:var(--text3);font-size:.83rem;margin-top:24px">
@@ -608,7 +641,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border2);padding:50px 5%
       <p style="color:var(--text2);font-size:1.05rem;margin-bottom:36px;position:relative;z-index:1">
         Bez karty kredytowej. Bez zobowiązań. Zacznij w 60 sekund.
       </p>
-      <a href="/register" class="btn-primary" style="font-size:1.05rem;padding:16px 36px;display:inline-flex;position:relative;z-index:1">
+      <a href="#" onclick="openAuthModal('register'); return false;" class="btn-primary" style="font-size:1.05rem;padding:16px 36px;display:inline-flex;position:relative;z-index:1">
         Utwórz darmowe konto →
       </a>
       <p class="cta-note">✓ Bez karty kredytowej &nbsp;·&nbsp; ✓ Anuluj kiedy chcesz &nbsp;·&nbsp; ✓ Dane bezpieczne (RODO)</p>
@@ -629,7 +662,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border2);padding:50px 5%
           <h4>Produkt</h4>
           <a href="#jak-dziala">Jak to działa</a>
           <a href="#cennik">Cennik</a>
-          <a href="/register">Zacznij za darmo</a>
+          <a href="#" onclick="openAuthModal('register'); return false;">Zacznij za darmo</a>
         </div>
         <div class="footer-col">
           <h4>Firma</h4>
@@ -651,6 +684,54 @@ footer{background:var(--bg2);border-top:1px solid var(--border2);padding:50px 5%
     </div>
   </div>
 </footer>
+
+<!-- AUTH MODAL -->
+<div class="auth-modal-backdrop" id="authModal" onclick="closeAuthModal(event)">
+  <div class="auth-modal">
+    <button class="auth-modal-close" onclick="closeAuthModal(null,true)" aria-label="Zamknij">✕</button>
+    <div class="auth-logo">
+      <h2>📄 PismaAI</h2>
+      <p id="authModalSubtitle">Zaloguj się do swojego konta</p>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Zaloguj się</button>
+      <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Utwórz konto</button>
+    </div>
+    <!-- Login -->
+    <div class="auth-form active" id="form-login">
+      <div class="auth-field">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="twoj@email.pl" autocomplete="email" />
+      </div>
+      <div class="auth-field">
+        <label>Hasło</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <button class="auth-btn" id="loginBtn" onclick="doLogin()">Zaloguj się →</button>
+      <div class="auth-msg" id="login-msg"></div>
+      <div class="auth-switch">Nie masz konta? <a onclick="switchAuthTab('register')">Zarejestruj się</a></div>
+    </div>
+    <!-- Register -->
+    <div class="auth-form" id="form-register">
+      <div class="auth-field">
+        <label>Email</label>
+        <input type="email" id="reg-email" placeholder="twoj@email.pl" autocomplete="email" />
+      </div>
+      <div class="auth-field">
+        <label>Hasło</label>
+        <input type="password" id="reg-password" placeholder="Min. 8 znaków" autocomplete="new-password" />
+        <div class="pass-hint">Min. 8 znaków, 1 wielka litera, 1 znak specjalny (!@#$%...)</div>
+      </div>
+      <div class="auth-field">
+        <label>Potwierdź hasło</label>
+        <input type="password" id="reg-password2" placeholder="Powtórz hasło" autocomplete="new-password" />
+      </div>
+      <button class="auth-btn" id="registerBtn" onclick="doRegister()">Utwórz konto →</button>
+      <div class="auth-msg" id="reg-msg"></div>
+      <div class="auth-switch">Masz już konto? <a onclick="switchAuthTab('login')">Zaloguj się</a></div>
+    </div>
+  </div>
+</div>
 
 <!-- DEMO LIGHTBOX -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
@@ -680,7 +761,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border2);padding:50px 5%
         <p>Gotowy, profesjonalny list w formacie PDF lub Word. Gotowy do druku i wysłania.</p>
       </div>
     </div>
-    <a href="/register" class="btn-primary" style="margin-top:24px;display:inline-flex">Wypróbuj za darmo →</a>
+    <a href="#" onclick="openAuthModal('register'); return false;" class="btn-primary" style="margin-top:24px;display:inline-flex">Wypróbuj za darmo →</a>
   </div>
 </div>
 
@@ -757,7 +838,104 @@ window.addEventListener('scroll', () => {
 
 // Keyboard close lightbox
 document.addEventListener('keydown', e => {
-  if(e.key === 'Escape') document.getElementById('lightbox').classList.remove('open');
+  if(e.key === 'Escape') {
+    document.getElementById('lightbox').classList.remove('open');
+    document.getElementById('authModal').classList.remove('open');
+  }
+});
+
+// Auth modal
+function openAuthModal(tab) {
+  document.getElementById('authModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  if (tab) switchAuthTab(tab);
+}
+function closeAuthModal(e, force) {
+  if (force || !e || e.target === document.getElementById('authModal')) {
+    document.getElementById('authModal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+}
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('form-' + tab).classList.add('active');
+  document.getElementById('authModalSubtitle').textContent =
+    tab === 'login' ? 'Zaloguj się do swojego konta' : 'Załóż darmowe konto';
+}
+function showAuthMsg(el, text, type) {
+  el.className = 'auth-msg ' + type;
+  el.textContent = text;
+}
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const msg = document.getElementById('login-msg');
+  const btn = document.getElementById('loginBtn');
+  msg.className = 'auth-msg'; msg.textContent = '';
+  if (!email || !password) { showAuthMsg(msg, 'Podaj email i hasło.', 'error'); return; }
+  btn.disabled = true; btn.textContent = 'Logowanie...';
+  try {
+    const res = await fetch('/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email, password})
+    });
+    const data = await res.json();
+    if (data.success) {
+      showAuthMsg(msg, 'Zalogowano! Przekierowuję...', 'success');
+      setTimeout(() => window.location.href = '/', 800);
+    } else {
+      showAuthMsg(msg, data.message || 'Błąd logowania.', 'error');
+      btn.disabled = false; btn.textContent = 'Zaloguj się →';
+    }
+  } catch (err) {
+    showAuthMsg(msg, 'Błąd połączenia z serwerem.', 'error');
+    btn.disabled = false; btn.textContent = 'Zaloguj się →';
+  }
+}
+async function doRegister() {
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const password2 = document.getElementById('reg-password2').value;
+  const msg = document.getElementById('reg-msg');
+  const btn = document.getElementById('registerBtn');
+  msg.className = 'auth-msg'; msg.textContent = '';
+  if (!email || !password) { showAuthMsg(msg, 'Podaj email i hasło.', 'error'); return; }
+  btn.disabled = true; btn.textContent = 'Tworzę konto...';
+  try {
+    const res = await fetch('/auth/register', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email, password, password2})
+    });
+    const data = await res.json();
+    if (data.success) {
+      msg.className = 'auth-msg success';
+      if (data.activation_link) {
+        msg.innerHTML = 'Konto utworzone!<br><br><small>Link aktywacyjny (DEV):<br><a href="' + data.activation_link + '" style="color:#86efac;word-break:break-all">' + data.activation_link + '</a></small>';
+      } else {
+        msg.textContent = 'Konto utworzone! Sprawdź skrzynkę email, żeby aktywować konto.';
+      }
+      msg.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Utwórz konto →';
+    } else {
+      showAuthMsg(msg, data.message || 'Błąd rejestracji.', 'error');
+      btn.disabled = false; btn.textContent = 'Utwórz konto →';
+    }
+  } catch (err) {
+    showAuthMsg(msg, 'Błąd połączenia z serwerem.', 'error');
+    btn.disabled = false; btn.textContent = 'Utwórz konto →';
+  }
+}
+// Enter key in login/register forms
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('login-password').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+  document.getElementById('reg-password2').addEventListener('keydown', e => { if(e.key==='Enter') doRegister(); });
+  // Auto-open modal based on URL path
+  if (window.location.pathname === '/register') openAuthModal('register');
+  else if (window.location.pathname === '/login') openAuthModal('login');
 });
 </script>
 </body>

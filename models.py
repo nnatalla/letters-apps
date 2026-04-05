@@ -119,6 +119,7 @@ class Sender(db.Model):
     kod_pocztowy = db.Column(db.String(20))
     telefon = db.Column(db.String(50))
     email = db.Column(db.String(255))
+    kategoria = db.Column(db.String(100))
 
     user = db.relationship("User", back_populates="senders")
 
@@ -132,6 +133,7 @@ class Sender(db.Model):
             "kod_pocztowy": self.kod_pocztowy,
             "telefon": self.telefon,
             "email": self.email,
+            "kategoria": self.kategoria,
         }
 
 

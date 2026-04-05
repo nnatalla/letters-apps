@@ -1,7 +1,15 @@
 import sqlite3
 import os
+import sys
 from datetime import datetime, timedelta
 import random
+
+# Wymuszenie UTF-8 na stdout (Windows cp1250 nie obsługuje emoji)
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
 
 class DatabaseManager:
     def __init__(self, db_path='avalon_system.db'):
@@ -81,7 +89,7 @@ class DatabaseManager:
         
         conn.commit()
         conn.close()
-        print("✅ Baza danych została zainicjalizowana")
+        print("[OK] Baza danych zainicjalizowana")
     
     def populate_test_data(self):
         """Wypełnienie bazy danych testowymi danymi"""

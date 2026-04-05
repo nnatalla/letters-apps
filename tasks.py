@@ -1,10 +1,24 @@
 ﻿import os
 import sys
+from pathlib import Path
 
 from celery import Celery
 from dotenv import load_dotenv
+from ocr_utils import resolve_poppler_path, resolve_tesseract_cmd
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent
+
+
+def load_environment_files():
+    load_dotenv(BASE_DIR / '.env')
+    if (os.getenv('FLASK_ENV') or '').strip().lower() == 'production':
+        for candidate in (BASE_DIR / '.env.production.new', BASE_DIR / '.env.production'):
+            if candidate.exists():
+                load_dotenv(candidate, override=True)
+                break
+
+
+load_environment_files()
 
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 
@@ -28,13 +42,13 @@ is_production = os.getenv('FLASK_ENV') == 'production'
 if is_production:
     load_dotenv('.env.production')
     import pytesseract
-    pytesseract.pytesseract.tesseract_cmd = os.getenv('TESSERACT_CMD', '/usr/bin/tesseract')
-    POPPLER_PATH = os.getenv('POPPLER_PATH', '/usr/bin')
+    pytesseract.pytesseract.tesseract_cmd = resolve_tesseract_cmd()
+    POPPLER_PATH = resolve_poppler_path()
     UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', '/opt/avalon/temp_uploads')
 else:
     import pytesseract
-    pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
-    POPPLER_PATH = r'C:\Poppler\poppler-23.01.0\Library\bin'
+    pytesseract.pytesseract.tesseract_cmd = resolve_tesseract_cmd()
+    POPPLER_PATH = resolve_poppler_path() or r'C:\Poppler\poppler-23.01.0\Library\bin'
     UPLOAD_FOLDER = os.path.join(os.path.expanduser('~'), 'temp_uploads')
 
 
@@ -45,6 +59,8 @@ def process_document_task(self, filepath, filename):
     from PIL import Image
     from pdf2image import convert_from_path
     from orchestrator import process_document
+
+    pytesseract.pytesseract.tesseract_cmd = resolve_tesseract_cmd()
 
     try:
         file_extension = os.path.splitext(filename)[1].lower()
