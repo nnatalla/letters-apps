@@ -106,12 +106,15 @@ Zasady:
 
     # Dane nadawcy z obiektu sender (jeśli przekazano)
     if sender:
+      sender_street = sender.get('adres', '') or sender.get('ulica', '')
+      sender_postal = sender.get('kod_pocztowy', '') or sender.get('kod', '')
+      sender_city_name = sender.get('miasto', city) or city
         s_address = ", ".join(filter(None, [
-            sender.get('ulica', ''),
-            f"{sender.get('kod_pocztowy', '')} {sender.get('miasto', city)}".strip()
+        sender_street,
+        f"{sender_postal} {sender_city_name}".strip()
         ]))
         s_contact = " / ".join(filter(None, [sender.get('telefon', ''), sender.get('email', '')]))
-        s_city = sender.get('miasto', city) or city
+      s_city = sender_city_name
     else:
         s_address = f"ul. Przykładowa 1, {city}"
         s_contact = "tel: 123456789"
@@ -155,8 +158,9 @@ Zasady:
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   }}
   .date {{ text-align: right; margin-bottom: 30px; }}
-  .sender {{ margin-bottom: 0; }}
-  .recipient {{ text-align: right; }}
+  .sender {{ margin-bottom: 0; color: #000 !important; }}
+  .recipient {{ text-align: right; color: #000 !important; }}
+  .sender *, .recipient * {{ color: #000 !important; }}
   .spacer {{ flex: 1; }}
   .title {{
     text-align: center;

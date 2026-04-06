@@ -7096,6 +7096,7 @@ function copyFieldValue(inputId) {
                 sender: currentSender ? {
                     nazwa: currentSender.nazwa,
                     adres: currentSender.adres,
+                    kod_pocztowy: currentSender.kod_pocztowy,
                     miasto: currentSender.miasto,
                     telefon: currentSender.telefon,
                     email: currentSender.email
@@ -8058,6 +8059,27 @@ function copyFieldValue(inputId) {
             return hit && hit.value ? String(hit.value).trim() : '';
         }
 
+        function getFieldValueByLabelFiltered(fields, includeRegex, excludeRegex) {
+            const hit = (fields || []).find(f => {
+                const label = String((f && f.label) || '').toLowerCase();
+                if (!label) return false;
+                if (!includeRegex.test(label)) return false;
+                if (excludeRegex && excludeRegex.test(label)) return false;
+                return true;
+            });
+            return hit && hit.value ? String(hit.value).trim() : '';
+        }
+
+        function getEntityValue(entities, keys) {
+            for (const key of (keys || [])) {
+                const value = entities && entities[key];
+                if (value !== undefined && value !== null && String(value).trim() !== '') {
+                    return String(value).trim();
+                }
+            }
+            return '';
+        }
+
         function detectSenderCategoryFromClassification(classification) {
             const subtype = ((classification && classification.subtype) || '').toLowerCase();
             const category = ((classification && classification.category) || '').toUpperCase();
@@ -8084,7 +8106,9 @@ function copyFieldValue(inputId) {
             const fields = ocr.fields || [];
 
             const entities = classification.detected_entities || {};
-            let nazwa = String(entities.odbiorca || entities.adresat || '').trim();
+            let nazwa = getEntityValue(entities, [
+                'odbiorca', 'adresat', 'recipient_name', 'addressee_name', 'adresat_nazwa', 'odbiorca_nazwa'
+            ]);
             let adres = '';
             let miasto = '';
             let kod_pocztowy = '';
@@ -8092,14 +8116,55 @@ function copyFieldValue(inputId) {
             let email = '';
 
             if (ocr.mode !== 'komornicze') {
-                nazwa = nazwa || getFieldValueByLabel(fields, /adresat|odbiorca|nazwa adresata|nazwa odbiorcy|instytucja odbiorcy/);
-                adres = getFieldValueByLabel(fields, /adres adresata|adres odbiorcy|ulica adresata|ulica odbiorcy|adres/);
-                const miastoField = getFieldValueByLabel(fields, /miasto adresata|miasto odbiorcy|miasto/);
-                const kodField = getFieldValueByLabel(fields, /kod pocztowy adresata|kod pocztowy odbiorcy|kod pocztowy/);
+                const senderLabels = /nadawc|wystawc|wnioskodawc|d[lł]u[zż]nik|komornik|pracodawc/;
+                nazwa = nazwa || getFieldValueByLabelFiltered(
+                    fields,
+                    /adresat|odbiorca|nazwa adresata|nazwa odbiorcy|instytucja odbiorcy|instytucja adresata|do kogo/,
+                    senderLabels
+                );
+
+                adres = getEntityValue(entities, [
+                    'adresat_adres', 'odbiorca_adres', 'recipient_address', 'addressee_address'
+                ]) || getFieldValueByLabelFiltered(
+                    fields,
+                    /adresat.*adres|odbiorca.*adres|adres adresata|adres odbiorcy|ulica adresata|ulica odbiorcy|adres korespondencyjny adresata|adres korespondencyjny odbiorcy/,
+                    senderLabels
+                );
+
+                const miastoField = getEntityValue(entities, [
+                    'adresat_miasto', 'odbiorca_miasto', 'recipient_city', 'addressee_city'
+                ]) || getFieldValueByLabelFiltered(
+                    fields,
+                    /miasto adresata|miasto odbiorcy|adresat.*miasto|odbiorca.*miasto/,
+                    senderLabels
+                );
+
+                const kodField = getEntityValue(entities, [
+                    'adresat_kod_pocztowy', 'odbiorca_kod_pocztowy', 'recipient_postal_code', 'addressee_postal_code'
+                ]) || getFieldValueByLabelFiltered(
+                    fields,
+                    /kod pocztowy adresata|kod pocztowy odbiorcy|adresat.*kod pocztowy|odbiorca.*kod pocztowy/,
+                    senderLabels
+                );
+
                 miasto = miastoField;
                 kod_pocztowy = kodField;
-                telefon = getFieldValueByLabel(fields, /telefon adresata|telefon odbiorcy|telefon/);
-                email = getFieldValueByLabel(fields, /email adresata|e-mail adresata|email odbiorcy|e-mail odbiorcy|email|e-mail/);
+
+                telefon = getEntityValue(entities, [
+                    'adresat_telefon', 'odbiorca_telefon', 'recipient_phone', 'addressee_phone'
+                ]) || getFieldValueByLabelFiltered(
+                    fields,
+                    /telefon adresata|telefon odbiorcy|adresat.*telefon|odbiorca.*telefon/,
+                    senderLabels
+                );
+
+                email = getEntityValue(entities, [
+                    'adresat_email', 'odbiorca_email', 'recipient_email', 'addressee_email'
+                ]) || getFieldValueByLabelFiltered(
+                    fields,
+                    /email adresata|e-mail adresata|email odbiorcy|e-mail odbiorcy|adresat.*email|odbiorca.*email/,
+                    senderLabels
+                );
             }
 
             nazwa = nazwa.replace(/^pani\s+|^pan\s+/i, '').trim();

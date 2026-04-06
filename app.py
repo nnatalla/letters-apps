@@ -388,13 +388,25 @@ def generate_letter():
     opcja = payload['option']
     dane = payload['dane']
     company = payload['company']
+    sender = payload.get('sender') or {}
     user_instructions = payload.get('user_instructions', '')
+
+    sender_company = (sender.get('nazwa') or company or '').strip()
+    sender_street = (sender.get('adres') or '').strip()
+    sender_postal = (sender.get('kod_pocztowy') or sender.get('kod') or '').strip()
+    sender_city = (sender.get('miasto') or '').strip()
+    sender_phone = (sender.get('telefon') or '').strip()
+    sender_email = (sender.get('email') or '').strip()
+
+    sender_city_line = " ".join(part for part in [sender_postal, sender_city] if part).strip()
+    sender_address = ", ".join(part for part in [sender_street, sender_city_line] if part) or 'ul. Przykładowa 1, 90-001 Łódź'
+    sender_contact = " / ".join(part for part in [sender_phone, sender_email] if part) or 'tel: 123456789 / email: biuro@avalon.pl'
     
     # Przygotowanie danych dla szablonu
     sender_data = {
-        'company': company,
-        'address': 'ul. Przykładowa 1, 90-001 Łódź',
-        'contact': 'tel: 123456789 / email: biuro@avalon.pl'
+        'company': sender_company or company,
+        'address': sender_address,
+        'contact': sender_contact
     }
     
     recipient_data = {
@@ -433,7 +445,7 @@ def generate_letter():
                 document_type="KOMORNICZE",
                 subtype=_subtype_label,
                 html_content=generated_content,
-                sender_name=company,
+                sender_name=sender_data['company'],
                 recipient_name=_recipient_name,
             )
             if not ok:
@@ -465,7 +477,7 @@ def generate_letter():
                 document_type="KOMORNICZE",
                 subtype=_subtype_label,
                 html_content=generated_content,
-                sender_name=company,
+                sender_name=sender_data['company'],
                 recipient_name=_recipient_name,
             )
             if not ok:
@@ -506,7 +518,7 @@ def generate_letter():
                 document_type="KOMORNICZE",
                 subtype=_subtype_label,
                 html_content=generated_content,
-                sender_name=company,
+                sender_name=sender_data['company'],
                 recipient_name=_recipient_name,
             )
             if not ok:
@@ -525,8 +537,20 @@ def generate_zbieg_letters():
     
     dane = payload['dane']
     company = payload['company']
+    sender = payload.get('sender') or {}
     user_instructions = payload.get('user_instructions', '')
     all_bailiffs = dane['komornicy']
+
+    sender_company = (sender.get('nazwa') or company or '').strip()
+    sender_street = (sender.get('adres') or '').strip()
+    sender_postal = (sender.get('kod_pocztowy') or sender.get('kod') or '').strip()
+    sender_city = (sender.get('miasto') or '').strip()
+    sender_phone = (sender.get('telefon') or '').strip()
+    sender_email = (sender.get('email') or '').strip()
+
+    sender_city_line = " ".join(part for part in [sender_postal, sender_city] if part).strip()
+    sender_address = ", ".join(part for part in [sender_street, sender_city_line] if part) or 'ul. Przykładowa 1, 90-001 Łódź'
+    sender_contact = " / ".join(part for part in [sender_phone, sender_email] if part) or 'tel: 123456789 / email: biuro@avalon.pl'
     
     if len(all_bailiffs) < 2:
         return jsonify({"error": "Zbieg komorniczy wymaga co najmniej 2 komorników"}), 400
@@ -535,9 +559,9 @@ def generate_zbieg_letters():
     
     # Przygotowanie danych nadawcy
     sender_data = {
-        'company': company,
-        'address': 'ul. Przykładowa 1, 90-001 Łódź',
-        'contact': 'tel: 123456789 / email: biuro@avalon.pl'
+        'company': sender_company or company,
+        'address': sender_address,
+        'contact': sender_contact
     }
     
     for i, recipient_bailiff in enumerate(all_bailiffs):
@@ -637,10 +661,9 @@ def generate_zbieg_letters():
                 <div class="date">Łódź, dnia {get_current_date()} r.</div>
                 
                 <div class="sender">
-                    <strong>{company}</strong><br>
-                    ul. Przykładowa 1<br>
-                    90-001 Łódź<br>
-                    tel: 123456789 / email: biuro@avalon.pl
+                    <strong>{sender_data.get('company', company)}</strong><br>
+                    {sender_data.get('address', '')}<br>
+                    {sender_data.get('contact', '')}
                 </div>
 
                 <div class="recipient">
@@ -715,6 +738,7 @@ def generate_letter_with_template(content_type, sender_data, recipient_data, cas
                 .date {{ text-align: right; margin-bottom: 40px; }}
                 .sender {{ margin-bottom: 80px; }}
                 .recipient {{ text-align: right; margin-bottom: 20px; }}
+                .sender, .sender *, .recipient, .recipient * {{ color: #000 !important; }}
                 .title {{ text-align: center; font-weight: bold; margin-bottom: 40px; text-transform: uppercase; }}
                 .content {{ text-align: justify; margin-bottom: 40px; }}
                 .closing {{ margin-top: 40px; }}
