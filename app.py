@@ -525,6 +525,7 @@ def generate_zbieg_letters():
     
     dane = payload['dane']
     company = payload['company']
+    user_instructions = payload.get('user_instructions', '')
     all_bailiffs = dane['komornicy']
     
     if len(all_bailiffs) < 2:
@@ -816,6 +817,7 @@ def generate_universal_letter():
         subtype = payload.get('subtype', 'nieznane')
         fields = payload.get('fields', [])
         company = payload.get('company', '')
+        recipient_name = payload.get('recipient_name', '')
         sender = payload.get('sender', None)
         scenario = payload.get('scenario', None)
         user_instructions = payload.get('user_instructions', '')
@@ -840,7 +842,7 @@ def generate_universal_letter():
             subtype=subtype,
             html_content=letter_html,
             sender_name=company,
-            recipient_name="",
+            recipient_name=recipient_name,
         )
         if not ok:
             return result
