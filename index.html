@@ -3768,11 +3768,16 @@
         }
         .history-bento-card {
             background: #141b2b; border-radius: 14px; padding: 18px 20px;
+            cursor: pointer;
             border: 1px solid rgba(255,255,255,.05); transition: border-color .2s;
         }
         .history-bento-card:hover { border-color: rgba(184,196,255,.18); }
         .history-bento-icon  { font-size: 20px; margin-bottom: 8px; }
         .history-bento-num   { font-size: 2.2em; font-weight: 800; color: #b8c4ff; line-height: 1; }
+        .history-bento-card:focus-visible {
+            outline: 2px solid #8fb3ff;
+            outline-offset: 2px;
+        }
         .history-bento-label { color: #8e909f !important; font-size: 11px; margin-top: 4px; }
         .history-topbar {
             display: flex; gap: 10px; margin-bottom: 18px; align-items: center;
@@ -4826,17 +4831,17 @@
                 </div>
                 <!-- Bento stats -->
                 <div class="history-bento-grid">
-                    <div class="history-bento-card">
+                    <div class="history-bento-card" role="button" tabindex="0" onclick="setHistoryTypeFilter('')" onkeydown="handleHistoryBentoKey(event, '')">
                         <div class="history-bento-icon">📄</div>
                         <div class="history-bento-num" id="bentoCntAll">0</div>
                         <div class="history-bento-label">Wszystkich pism</div>
                     </div>
-                    <div class="history-bento-card">
+                    <div class="history-bento-card" role="button" tabindex="0" onclick="setHistoryTypeFilter('komornicze')" onkeydown="handleHistoryBentoKey(event, 'komornicze')">
                         <div class="history-bento-icon">⚖️</div>
                         <div class="history-bento-num" id="bentoCntKomornicze">0</div>
                         <div class="history-bento-label">Komorniczych</div>
                     </div>
-                    <div class="history-bento-card">
+                    <div class="history-bento-card" role="button" tabindex="0" onclick="setHistoryTypeFilter('universal')" onkeydown="handleHistoryBentoKey(event, 'universal')">
                         <div class="history-bento-icon">🌐</div>
                         <div class="history-bento-num" id="bentoCntUniversal">0</div>
                         <div class="history-bento-label">Uniwersalnych</div>
@@ -10767,6 +10772,20 @@ function copyFieldValue(inputId) {
         function filterHistory() {
             const q = (document.querySelector('.history-search-input') || {}).value || '';
             renderHistoryList(getFilteredHistory(q));
+        }
+
+        function setHistoryTypeFilter(type) {
+            const typSelect = document.getElementById('histFilterTyp');
+            if (typSelect) typSelect.value = type || '';
+            filterHistory();
+        }
+
+        function handleHistoryBentoKey(event, type) {
+            if (!event) return;
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                setHistoryTypeFilter(type);
+            }
         }
 
         function filterHistorySearch(query) {
