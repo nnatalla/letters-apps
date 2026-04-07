@@ -8838,25 +8838,113 @@ function copyFieldValue(inputId) {
             const previewName = document.getElementById('aiPreviewBailiffName');
             if (previewName && recipient.nazwa) previewName.textContent = recipient.nazwa;
 
-            // Tryb universal: wypełnij dynamiczne pola po etykietach.
+            // Tryb universal: uzupełniaj tylko pola odbiorcy odpowiedzi, bez pól nabywcy/faktury.
             const recCityLine = [recipient.kod_pocztowy || '', recipient.miasto || ''].filter(Boolean).join(' ').trim();
             const recContactLine = [recipient.telefon || '', recipient.email || ''].filter(Boolean).join(' ').trim();
-            const labelMap = [
-                { regex: /nadawc|wystawc|adresat|odbiorc|instytucja.*nadaw|instytucja.*odbior|do kogo|od kogo/, value: recipient.nazwa || '' },
-                { regex: /adres/, value: recipient.adres || '' },
-                { regex: /kod pocztowy/, value: recipient.kod_pocztowy || '' },
-                { regex: /miasto|miejscow/, value: recipient.miasto || '' },
-                { regex: /kod.*miasto|miasto.*kod/, value: recCityLine },
-                { regex: /kontakt|telefon|email|e-mail/, value: recContactLine }
-            ];
+            const isBuyerLabel = (label) => /nabywc|buyer/.test(label);
+            const isAddressLabel = (label) => /adres/.test(label);
+            const isPostalLabel = (label) => /kod pocztowy|\bkod\b|zip|postal/.test(label);
+            const isCityLabel = (label) => /miasto|miejscow/.test(label);
+            const isContactLabel = (label) => /kontakt|telefon|email|e-mail/.test(label);
+
+            const isRecipientNameLabel = (label) => {
+                if (isBuyerLabel(label)) return false;
+                if (isAddressLabel(label) || isPostalLabel(label) || isCityLabel(label) || isContactLabel(label)) return false;
+                return /nadawc|wystawc|adresat|odbiorc|instytucja.*nadaw|instytucja.*odbior|do kogo|od kogo/.test(label);
+            };
+
+            const isRecipientAddressLabel = (label) => {
+                if (isBuyerLabel(label)) return false;
+                return /adres.*(nadawc|wystawc|adresat|odbiorc)|adres (nadawcy|wystawcy|adresata|odbiorcy)|ulica.*(nadawc|wystawc|adresat|odbiorc)|siedzib/.test(label);
+            };
+
+            const isRecipientPostalLabel = (label) => {
+                if (isBuyerLabel(label)) return false;
+                return /kod pocztowy.*(nadawc|wystawc|adresat|odbiorc)|(nadawc|wystawc|adresat|odbiorc).*kod pocztowy/.test(label);
+            };
+
+            const isRecipientCityLabel = (label) => {
+                if (isBuyerLabel(label)) return false;
+                return /miasto.*(nadawc|wystawc|adresat|odbiorc)|(nadawc|wystawc|adresat|odbiorc).*miasto|miejscow.*(nadawc|wystawc|adresat|odbiorc)/.test(label);
+            };
+
+            const isRecipientPostalCityLabel = (label) => {
+                if (isBuyerLabel(label)) return false;
+                return /kod.*miasto|miasto.*kod/.test(label) && /(nadawc|wystawc|adresat|odbiorc)/.test(label);
+            };
+
+            const isRecipientContactLabel = (label) => {
+                if (isBuyerLabel(label)) return false;
+                return /(kontakt|telefon|email|e-mail).*(nadawc|wystawc|adresat|odbiorc)|(nadawc|wystawc|adresat|odbiorc).*(kontakt|telefon|email|e-mail)/.test(label);
+            };
+
+            const looksLikeAddressValue = (value) => {
+                const v = String(value || '').trim();
+                if (!v) return false;
+                if (/\b\d{2}-\d{3}\b/.test(v)) return true;
+                if (/\d/.test(v) && /ul\.|ulica|al\.|aleja|plac|pl\.|rondo|os\.|lok\.|m\./i.test(v)) return true;
+                if (/\d/.test(v) && v.split(/\s+/).length >= 2) return true;
+                return false;
+            };
+
+            const normalizedName = normalizeSenderText(recipient.nazwa || '');
+            const normalizedAddress = normalizeSenderText(recipient.adres || '');
+            const recipientAddressLooksLikeAddress = looksLikeAddressValue(recipient.adres || '');
+            const recipientAddressLooksLikeName = !!normalizedAddress && normalizedAddress === normalizedName;
+
+            let recipientAddressInput = null;
+            let buyerAddressInput = null;
 
             (window.currentFields || []).forEach(field => {
                 const input = document.getElementById(`ufield_${field.id}`);
                 if (!input) return;
                 const label = String(field.label || '').toLowerCase();
-                const match = labelMap.find(m => m.value && m.regex.test(label));
-                if (match) input.value = match.value;
+
+                if (isRecipientAddressLabel(label)) recipientAddressInput = input;
+                if (isBuyerLabel(label) && isAddressLabel(label)) buyerAddressInput = input;
+
+                if (isRecipientNameLabel(label) && recipient.nazwa) {
+                    input.value = recipient.nazwa;
+                    return;
+                }
+                if (isRecipientAddressLabel(label) && recipient.adres) {
+                    const currentValue = String(input.value || '').trim();
+                    if ((recipientAddressLooksLikeName || !recipientAddressLooksLikeAddress)
+                        && currentValue
+                        && looksLikeAddressValue(currentValue)) {
+                        return;
+                    }
+                    input.value = recipient.adres;
+                    return;
+                }
+                if (isRecipientPostalCityLabel(label) && recCityLine) {
+                    input.value = recCityLine;
+                    return;
+                }
+                if (isRecipientPostalLabel(label) && recipient.kod_pocztowy) {
+                    input.value = recipient.kod_pocztowy;
+                    return;
+                }
+                if (isRecipientCityLabel(label) && recipient.miasto) {
+                    input.value = recipient.miasto;
+                    return;
+                }
+                if (isRecipientContactLabel(label) && recContactLine) {
+                    input.value = recContactLine;
+                }
             });
+
+            // Korekta dla faktur: gdy adres odbiorcy został rozpoznany jako nazwa,
+            // a adres nabywcy wygląda jak pełny adres, użyj go jako adresu odbiorcy.
+            if (recipientAddressInput && buyerAddressInput) {
+                const recipientAddressValue = String(recipientAddressInput.value || '').trim();
+                const buyerAddressValue = String(buyerAddressInput.value || '').trim();
+                const recipientAddressIsName = normalizeSenderText(recipientAddressValue) === normalizedName;
+                if ((recipientAddressIsName || !looksLikeAddressValue(recipientAddressValue))
+                    && looksLikeAddressValue(buyerAddressValue)) {
+                    recipientAddressInput.value = buyerAddressValue;
+                }
+            }
         }
 
         function selectRecipientOption(recipientId) {
