@@ -106,15 +106,15 @@ Zasady:
 
     # Dane nadawcy z obiektu sender (jeśli przekazano)
     if sender:
-      sender_street = sender.get('adres', '') or sender.get('ulica', '')
-      sender_postal = sender.get('kod_pocztowy', '') or sender.get('kod', '')
-      sender_city_name = sender.get('miasto', city) or city
+        sender_street = sender.get('adres', '') or sender.get('ulica', '')
+        sender_postal = sender.get('kod_pocztowy', '') or sender.get('kod', '')
+        sender_city_name = sender.get('miasto', city) or city
         s_address = ", ".join(filter(None, [
-        sender_street,
-        f"{sender_postal} {sender_city_name}".strip()
+            sender_street,
+            f"{sender_postal} {sender_city_name}".strip()
         ]))
         s_contact = " / ".join(filter(None, [sender.get('telefon', ''), sender.get('email', '')]))
-      s_city = sender_city_name
+        s_city = sender_city_name
     else:
         s_address = f"ul. Przykładowa 1, {city}"
         s_contact = "tel: 123456789"
