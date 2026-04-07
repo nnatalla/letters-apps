@@ -1,6 +1,7 @@
 ﻿import os
 import requests
 import json
+import re
 from datetime import datetime
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
@@ -34,6 +35,50 @@ def get_context(category: str, subtype: str) -> str:
 
 def get_current_date():
     return datetime.now().strftime('%d.%m.%Y')
+
+
+def _normalize_sender_address_lines(sender: dict, fallback_city: str):
+  raw_address = (sender.get('adres', '') or sender.get('ulica', '') or '').strip()
+  raw_postal = (sender.get('kod_pocztowy', '') or sender.get('kod', '') or '').strip()
+  raw_city = (sender.get('miasto', '') or fallback_city or '').strip()
+  postal_re = re.compile(r'\b\d{2}-\d{3}\b')
+
+  parts = [p.strip() for p in raw_address.replace('\n', ',').split(',') if p.strip()]
+
+  postal_city_from_parts = ''
+  street_from_parts = ''
+
+  for part in parts:
+    if postal_re.search(part) and not postal_city_from_parts:
+      postal_city_from_parts = part
+      continue
+    if not street_from_parts:
+      street_from_parts = part
+
+  street = street_from_parts or raw_address
+  if postal_re.search(street):
+    street = ''
+
+  if raw_postal:
+    postal_city = f"{raw_postal} {raw_city}".strip()
+  else:
+    postal_city = postal_city_from_parts
+
+  if postal_city and raw_city:
+    normalized_city = raw_city.lower()
+    if normalized_city not in postal_city.lower():
+      # Jeżeli OCR rozdzielił kod i miasto, dopnij miasto do linii kodu.
+      if postal_re.search(postal_city):
+        postal_city = f"{postal_city} {raw_city}".strip()
+
+  if not postal_city and raw_city:
+    postal_city = raw_city
+
+  if not raw_city and postal_city:
+    city_without_postal = postal_re.sub('', postal_city).strip(', ').strip()
+    raw_city = city_without_postal or fallback_city
+
+  return street.strip(), postal_city.strip(), (raw_city or fallback_city).strip()
 
 
 def generate_universal_letter(category: str, subtype: str, extracted_fields: list,
@@ -106,19 +151,17 @@ Zasady:
 
     # Dane nadawcy z obiektu sender (jeśli przekazano)
     if sender:
-        sender_street = sender.get('adres', '') or sender.get('ulica', '')
-        sender_postal = sender.get('kod_pocztowy', '') or sender.get('kod', '')
-        sender_city_name = sender.get('miasto', city) or city
-        s_address = ", ".join(filter(None, [
-            sender_street,
-            f"{sender_postal} {sender_city_name}".strip()
-        ]))
+        s_street, s_postal_city, sender_city_name = _normalize_sender_address_lines(sender, city)
         s_contact = " / ".join(filter(None, [sender.get('telefon', ''), sender.get('email', '')]))
         s_city = sender_city_name
     else:
-        s_address = f"ul. Przykładowa 1, {city}"
+        s_street = "ul. Przykładowa 1"
+        s_postal_city = city
         s_contact = "tel: 123456789"
         s_city = city
+
+    sender_lines = [line for line in [s_street, s_postal_city] if line]
+    sender_address_html = "<br>\n      ".join(sender_lines)
 
     recipient_lines = letter_parts.get('recipient_lines', ['Adresat'])
     recipient_html = ""
@@ -179,7 +222,7 @@ Zasady:
     <div class="date">{s_city}, dnia {today} r.</div>
     <div class="sender">
       <strong>{company_name}</strong><br>
-      {s_address}<br>
+      {sender_address_html}<br>
       {s_contact}
     </div>
     <div style="flex: 1.5"></div>

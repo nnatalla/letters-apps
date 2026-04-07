@@ -2369,6 +2369,12 @@
         }
         #generatedLetters h3 { color: var(--text) !important; }
         #generatedLetters p[style*="color: #6c757d"], #generatedLetters p[style*="color:#6c757d"] { color: var(--text2) !important; }
+        #generatedLetters .sender,
+        #generatedLetters .sender *,
+        #generatedLetters .recipient,
+        #generatedLetters .recipient * {
+            color: #000000 !important;
+        }
 
         /* Step-4 bottom instruction box (inline styled) */
         #step-4 div[style*="#f8f9fa"],
@@ -2380,7 +2386,8 @@
         }
         #step-4 h4[style*="color: #495057"] { color: var(--text) !important; }
         #step-4 ul, #step-4 li { color: var(--text2) !important; }
-        #step-4 strong { color: var(--text) !important; }
+        #step-4 div[style*="#f8f9fa"] strong,
+        #step-4 div[style*="background: #f8"] strong { color: var(--text) !important; }
 
         /* ══════════════════════════════════════════════════
            ANIMATED UNDERLINE for form inputs (krok_2 stitch style)
@@ -8319,6 +8326,91 @@ function copyFieldValue(inputId) {
             return hit && hit.value ? String(hit.value).trim() : '';
         }
 
+        function findRecipientNameFieldIndex(fields, candidateName) {
+            const target = normalizeSenderText(candidateName);
+            if (!target) return -1;
+            const recipientLabelRegex = /adresat|odbiorca|do kogo|recipient|addressee/;
+            const senderLabelRegex = /nadawc|wystawc|wnioskodawc|od kogo|sender|d[lł]u[zż]nik|komornik|pracodawc/;
+
+            let fallbackIndex = -1;
+            for (let i = 0; i < (fields || []).length; i++) {
+                const f = fields[i] || {};
+                const label = String(f.label || '').toLowerCase();
+                const value = normalizeSenderText(f.value || '');
+                if (!value || value !== target) continue;
+                if (senderLabelRegex.test(label)) continue;
+                if (recipientLabelRegex.test(label)) return i;
+                if (fallbackIndex < 0) fallbackIndex = i;
+            }
+            return fallbackIndex;
+        }
+
+        function parseStreetAndPostalCityFromText(text) {
+            const raw = String(text || '').trim();
+            if (!raw) return { street: '', postalCity: '' };
+
+            const parts = raw.replace(/\s*\n\s*/g, ', ').split(',').map(p => p.trim()).filter(Boolean);
+            const postalRe = /\b\d{2}-\d{3}\b/;
+            let postalCity = parts.find(p => postalRe.test(p)) || '';
+            let street = parts.find(p => !postalRe.test(p)) || '';
+
+            if (!postalCity && postalRe.test(raw)) {
+                postalCity = raw;
+            }
+            if (!street && !postalRe.test(raw)) {
+                street = raw;
+            }
+
+            return { street, postalCity };
+        }
+
+        function extractRecipientAddressNearName(fields, candidateName) {
+            const idx = findRecipientNameFieldIndex(fields, candidateName);
+            if (idx < 0) return { adres: '', kod_pocztowy: '', miasto: '' };
+
+            const senderLabelRegex = /nadawc|wystawc|wnioskodawc|od kogo|sender|d[lł]u[zż]nik|komornik|pracodawc/;
+            const addressLabelRegex = /adres|ulica|siedzib|adres korespondencyjny/;
+            const cityLabelRegex = /miasto|miejscowosc|miejscowość/;
+            const postalLabelRegex = /kod pocztowy|zip|postal/;
+            const postalRe = /\b\d{2}-\d{3}\b/;
+
+            let adres = '';
+            let kod = '';
+            let miasto = '';
+
+            for (let i = idx + 1; i < Math.min((fields || []).length, idx + 7); i++) {
+                const f = fields[i] || {};
+                const label = String(f.label || '').toLowerCase();
+                const value = String(f.value || '').trim();
+                if (!value || senderLabelRegex.test(label)) continue;
+
+                if (!adres && (addressLabelRegex.test(label) || (/\d/.test(value) && /ul\.|alej|al\.|pl\.|plac|rondo|os\./i.test(value)))) {
+                    const parsed = parseStreetAndPostalCityFromText(value);
+                    adres = parsed.street || value;
+                    if (!kod && parsed.postalCity) {
+                        const m = parsed.postalCity.match(postalRe);
+                        if (m) kod = m[0];
+                        miasto = parsed.postalCity.replace(postalRe, '').trim();
+                    }
+                    continue;
+                }
+
+                if (!kod && (postalLabelRegex.test(label) || postalRe.test(value))) {
+                    const m = value.match(postalRe);
+                    if (m) kod = m[0];
+                    const rest = value.replace(postalRe, '').trim();
+                    if (rest && !miasto) miasto = rest;
+                    continue;
+                }
+
+                if (!miasto && cityLabelRegex.test(label)) {
+                    miasto = value;
+                }
+            }
+
+            return { adres, kod_pocztowy: kod, miasto };
+        }
+
         function getEntityValue(entities, keys) {
             for (const key of (keys || [])) {
                 const value = entities && entities[key];
@@ -8371,8 +8463,7 @@ function copyFieldValue(inputId) {
                     /adresat|odbiorca|nazwa adresata|nazwa odbiorcy|instytucja odbiorcy|instytucja adresata|do kogo/,
                     senderLabels
                 );
-
-                const side = detectCandidateSide(fields, nazwa);
+                const nearRecipient = extractRecipientAddressNearName(fields, nazwa);
 
                 const recipientAddress = getEntityValue(entities, [
                     'adresat_adres', 'odbiorca_adres', 'recipient_address', 'addressee_address'
@@ -8381,16 +8472,7 @@ function copyFieldValue(inputId) {
                     /adresat.*adres|odbiorca.*adres|adres adresata|adres odbiorcy|ulica adresata|ulica odbiorcy|adres korespondencyjny adresata|adres korespondencyjny odbiorcy/,
                     senderLabels
                 );
-
-                const senderAddress = getEntityValue(entities, [
-                    'nadawca_adres', 'wystawca_adres', 'sender_address'
-                ]) || getFieldValueByLabelFiltered(
-                    fields,
-                    /nadawca.*adres|wystawca.*adres|adres nadawcy|ulica nadawcy|adres korespondencyjny nadawcy/,
-                    /adresat|odbiorca/
-                );
-
-                adres = pickBySide(side, recipientAddress, senderAddress, '');
+                adres = recipientAddress || nearRecipient.adres || '';
 
                 const recipientCity = getEntityValue(entities, [
                     'adresat_miasto', 'odbiorca_miasto', 'recipient_city', 'addressee_city'
@@ -8400,14 +8482,6 @@ function copyFieldValue(inputId) {
                     senderLabels
                 );
 
-                const senderCity = getEntityValue(entities, [
-                    'nadawca_miasto', 'wystawca_miasto', 'sender_city'
-                ]) || getFieldValueByLabelFiltered(
-                    fields,
-                    /miasto nadawcy|nadawca.*miasto|wystawca.*miasto/,
-                    /adresat|odbiorca/
-                );
-
                 const recipientPostal = getEntityValue(entities, [
                     'adresat_kod_pocztowy', 'odbiorca_kod_pocztowy', 'recipient_postal_code', 'addressee_postal_code'
                 ]) || getFieldValueByLabelFiltered(
@@ -8415,17 +8489,8 @@ function copyFieldValue(inputId) {
                     /kod pocztowy adresata|kod pocztowy odbiorcy|adresat.*kod pocztowy|odbiorca.*kod pocztowy/,
                     senderLabels
                 );
-
-                const senderPostal = getEntityValue(entities, [
-                    'nadawca_kod_pocztowy', 'wystawca_kod_pocztowy', 'sender_postal_code'
-                ]) || getFieldValueByLabelFiltered(
-                    fields,
-                    /kod pocztowy nadawcy|nadawca.*kod pocztowy|wystawca.*kod pocztowy/,
-                    /adresat|odbiorca/
-                );
-
-                miasto = pickBySide(side, recipientCity, senderCity, '');
-                kod_pocztowy = pickBySide(side, recipientPostal, senderPostal, '');
+                miasto = recipientCity || nearRecipient.miasto || '';
+                kod_pocztowy = recipientPostal || nearRecipient.kod_pocztowy || '';
 
                 const recipientPhone = getEntityValue(entities, [
                     'adresat_telefon', 'odbiorca_telefon', 'recipient_phone', 'addressee_phone'
@@ -8434,16 +8499,7 @@ function copyFieldValue(inputId) {
                     /telefon adresata|telefon odbiorcy|adresat.*telefon|odbiorca.*telefon/,
                     senderLabels
                 );
-
-                const senderPhone = getEntityValue(entities, [
-                    'nadawca_telefon', 'wystawca_telefon', 'sender_phone'
-                ]) || getFieldValueByLabelFiltered(
-                    fields,
-                    /telefon nadawcy|nadawca.*telefon|wystawca.*telefon/,
-                    /adresat|odbiorca/
-                );
-
-                telefon = pickBySide(side, recipientPhone, senderPhone, '');
+                telefon = recipientPhone || '';
 
                 const recipientEmail = getEntityValue(entities, [
                     'adresat_email', 'odbiorca_email', 'recipient_email', 'addressee_email'
@@ -8452,16 +8508,7 @@ function copyFieldValue(inputId) {
                     /email adresata|e-mail adresata|email odbiorcy|e-mail odbiorcy|adresat.*email|odbiorca.*email/,
                     senderLabels
                 );
-
-                const senderEmail = getEntityValue(entities, [
-                    'nadawca_email', 'wystawca_email', 'sender_email'
-                ]) || getFieldValueByLabelFiltered(
-                    fields,
-                    /email nadawcy|e-mail nadawcy|nadawca.*email|wystawca.*email/,
-                    /adresat|odbiorca/
-                );
-
-                email = pickBySide(side, recipientEmail, senderEmail, '');
+                email = recipientEmail || '';
             }
 
             nazwa = nazwa.replace(/^pani\s+|^pan\s+/i, '').trim();
