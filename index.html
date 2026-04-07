@@ -3924,6 +3924,53 @@
         .step4-letter-btn-label  { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #b8c4ff; margin-bottom: 4px; }
         .step4-letter-btn-title  { font-size: 13px; font-weight: 600; color: #dce2f7; }
         .step4-letter-btn-sub    { font-size: 11px; color: #8e909f; margin-top: 3px; }
+        .step4-title-slot {
+            position: relative;
+            height: 86px;
+            margin-bottom: 2px;
+        }
+        .step4-title-text {
+            display: -webkit-box;
+            line-clamp: 4;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.25;
+            white-space: normal;
+        }
+        .step4-title-editor-overlay {
+            position: absolute;
+            inset: 0;
+            border: 1px solid rgba(184,196,255,.28);
+            border-radius: 8px;
+            background: rgba(20,27,43,.95);
+            padding: 6px;
+        }
+        .step4-title-editor-textarea {
+            width: 100%;
+            height: calc(100% - 28px);
+            resize: none;
+            border: 1px solid rgba(184,196,255,.35);
+            border-radius: 6px;
+            background: rgba(10,15,24,.9);
+            color: #dce2f7;
+            padding: 6px 8px;
+            font-size: 13px;
+            line-height: 1.25;
+            font-weight: 600;
+        }
+        .step4-title-editor-textarea:focus {
+            outline: none;
+            border-color: #b8c4ff;
+            box-shadow: 0 0 0 2px rgba(184,196,255,.18);
+        }
+        .step4-title-editor-actions {
+            height: 22px;
+            margin-top: 4px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 6px;
+        }
         .step4-letter-item { display: flex; align-items: stretch; gap: 8px; }
         .step4-letter-item .step4-letter-btn { flex: 1; }
         .step4-letter-edit-btn {
@@ -3932,22 +3979,6 @@
             cursor: pointer; font-size: 14px;
         }
         .step4-letter-edit-btn:hover { filter: brightness(1.12); }
-        .step4-title-inline-wrap { display: flex; align-items: center; gap: 6px; }
-        .step4-title-inline-input {
-            width: 100%; min-width: 0;
-            border: 1px solid rgba(184,196,255,.35);
-            border-radius: 8px;
-            background: rgba(20,27,43,.8);
-            color: #dce2f7;
-            padding: 6px 8px;
-            font-size: 13px;
-            font-weight: 600;
-        }
-        .step4-title-inline-input:focus {
-            outline: none;
-            border-color: #b8c4ff;
-            box-shadow: 0 0 0 2px rgba(184,196,255,.18);
-        }
         .step4-title-inline-action {
             width: 24px; height: 24px; border-radius: 6px;
             border: 1px solid rgba(255,255,255,.12);
@@ -7463,13 +7494,16 @@ function copyFieldValue(inputId) {
                     .replace(/>/g, '&gt;')
                     .replace(/"/g, '&quot;');
                 const editing = _step4EditingTitleIndex === i;
-                const titleMarkup = editing
-                    ? `<div class="step4-title-inline-wrap" onclick="event.stopPropagation()">
-                        <input id="step4TitleInput-${i}" class="step4-title-inline-input" value="${safeTitle}" onkeydown="onStep4TitleInputKeydown(${i}, event)">
-                        <button class="step4-title-inline-action" title="Zapisz" onclick="event.stopPropagation(); saveStep4TitleInline(${i})">✓</button>
-                        <button class="step4-title-inline-action" title="Anuluj" onclick="event.stopPropagation(); cancelStep4TitleEdit()">✕</button>
-                    </div>`
-                    : `<div class="step4-letter-btn-title">${safeTitle}</div>`;
+                const titleMarkup = `<div class="step4-title-slot" onclick="event.stopPropagation()">
+                    <div class="step4-letter-btn-title step4-title-text">${safeTitle}</div>
+                    ${editing ? `<div class="step4-title-editor-overlay">
+                        <textarea id="step4TitleInput-${i}" class="step4-title-editor-textarea" onkeydown="onStep4TitleInputKeydown(${i}, event)">${safeTitle}</textarea>
+                        <div class="step4-title-editor-actions">
+                            <button class="step4-title-inline-action" title="Zapisz (Ctrl+Enter)" onclick="event.stopPropagation(); saveStep4TitleInline(${i})">✓</button>
+                            <button class="step4-title-inline-action" title="Anuluj (Esc)" onclick="event.stopPropagation(); cancelStep4TitleEdit()">✕</button>
+                        </div>
+                    </div>` : ''}
+                </div>`;
                 return `<div class="step4-letter-item">
                     <button class="step4-letter-btn${i === 0 ? ' active' : ''}" onclick="step4SelectLetter(${i})">
                         <div class="step4-letter-btn-label">LIST ${i + 1}</div>
@@ -7529,7 +7563,7 @@ function copyFieldValue(inputId) {
         }
 
         function onStep4TitleInputKeydown(index, event) {
-            if (event.key === 'Enter') {
+            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
                 event.preventDefault();
                 saveStep4TitleInline(index);
             } else if (event.key === 'Escape') {
