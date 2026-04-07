@@ -38,6 +38,14 @@ def get_current_date():
 
 
 def _normalize_sender_address_lines(sender: dict, fallback_city: str):
+  def _normalize_street_unit(street_value: str) -> str:
+    street = str(street_value or '').strip()
+    if not street:
+      return ''
+    if '/' in street or ' m.' in street.lower() or 'm.' in street.lower():
+      return street
+    return re.sub(r'\b(\d+[A-Za-z]?)\s+(\d{1,4}[A-Za-z]?)\b', r'\1/\2', street)
+
   raw_address = (sender.get('adres', '') or sender.get('ulica', '') or '').strip()
   raw_postal = (sender.get('kod_pocztowy', '') or sender.get('kod', '') or '').strip()
   raw_city = (sender.get('miasto', '') or fallback_city or '').strip()
@@ -63,7 +71,7 @@ def _normalize_sender_address_lines(sender: dict, fallback_city: str):
       street_from_parts = (m.group(1) or '').strip().rstrip(',')
       postal_city_from_parts = (m.group(2) or '').strip()
 
-  street = street_from_parts or raw_address
+  street = _normalize_street_unit(street_from_parts or raw_address)
   if postal_re.search(street):
     street = ''
 

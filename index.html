@@ -4160,6 +4160,33 @@
             background: #f9fafb; border-bottom: 1px solid rgba(37,99,235,.1);
             padding: 9px 16px; display: flex; justify-content: space-between; align-items: center;
         }
+        .step4-issue-meta {
+            display: grid;
+            grid-template-columns: 1fr 170px auto;
+            gap: 8px;
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(37,99,235,.1);
+            background: #ffffff;
+            align-items: center;
+        }
+        .step4-issue-meta input {
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 13px;
+            background: #fff;
+            color: #0f172a;
+        }
+        .step4-issue-meta button {
+            border: 1px solid #2a5298;
+            border-radius: 8px;
+            background: #2a5298;
+            color: #fff;
+            padding: 8px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
         .step4-macdots, .step4-preview-macdots { display: flex; gap: 6px; }
         .step4-macdots span, .step4-preview-macdots span { width: 11px; height: 11px; border-radius: 50%; display: block; }
         .step4-preview-filename  { font-size: 10px; font-family: monospace; color: #6b7280; letter-spacing: .05em; }
@@ -4177,6 +4204,20 @@
         }
         html.dark-mode .step4-preview-body {
             background: #070e1d;
+        }
+        html.dark-mode .step4-issue-meta {
+            background: rgba(35,42,58,.5);
+            border-bottom-color: rgba(255,255,255,.06);
+        }
+        html.dark-mode .step4-issue-meta input {
+            background: #0f1729;
+            color: #dce2f7;
+            border-color: rgba(255,255,255,.14);
+        }
+        html.dark-mode .step4-issue-meta button {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: #fff;
         }
         .step4-actions-col       { display: flex; flex-direction: column; gap: 8px; }
         .step4-action-btn {
@@ -5542,6 +5583,11 @@
                                 <span style="background:#28ca41;"></span>
                             </div>
                             <span class="step4-preview-filename" id="step4PreviewFilename">odpowiedz.docx</span>
+                        </div>
+                        <div class="step4-issue-meta">
+                            <input type="text" id="step4IssuePlace" placeholder="Miejsce nadania (np. Łódź)" oninput="applyStep4IssueMetaLive()">
+                            <input type="date" id="step4IssueDate" onchange="applyStep4IssueMetaLive()">
+                            <button type="button" onclick="applyStep4IssueMetaLive()">Zastosuj</button>
                         </div>
                         <div class="step4-preview-body">
                             <div class="generated-letters" id="generatedLetters"></div>
@@ -7743,6 +7789,7 @@ function copyFieldValue(inputId) {
             window.generatedLetters = letters;
             buildStep4LetterSidebar(letters);
             currentLetterIndex = 0;
+            refreshStep4IssueMetaControls();
         }
 
         function displayMultipleLetters(letters) {
@@ -7821,6 +7868,7 @@ function copyFieldValue(inputId) {
             allGeneratedLetters = letters;
             buildStep4LetterSidebar(letters);
             currentLetterIndex = 0;
+            refreshStep4IssueMetaControls();
         }
 
         function previousLetter() {
@@ -7991,7 +8039,93 @@ function copyFieldValue(inputId) {
                 const t = allGeneratedLetters[index].title || 'odpowiedz';
                 fname.textContent = t.toLowerCase().replace(/\s+/g, '_') + '.docx';
             }
+            refreshStep4IssueMetaControls();
             updateNavigationButtons();
+        }
+
+        function parsePlDateToIso(datePl) {
+            const m = String(datePl || '').trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+            if (!m) return '';
+            const dd = m[1].padStart(2, '0');
+            const mm = m[2].padStart(2, '0');
+            return `${m[3]}-${mm}-${dd}`;
+        }
+
+        function formatIsoDateToPl(dateIso) {
+            const m = String(dateIso || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (!m) return '';
+            return `${m[3]}.${m[2]}.${m[1]}`;
+        }
+
+        function getDefaultIssuePlace() {
+            const senderCity = String((currentSender && currentSender.miasto) || '').trim();
+            return senderCity || 'Łódź';
+        }
+
+        function extractIssueMetaFromContent(html) {
+            const text = String(html || '');
+            const dateBlock = text.match(/<div class="date">\s*([^<]+?)\s*<\/div>/i);
+            const source = dateBlock ? dateBlock[1] : text;
+
+            const m = source.match(/([^,\n<]+),\s*dnia\s*(\d{1,2}\.\d{1,2}\.\d{4})\s*r\./i)
+                || source.match(/([^,\n<]+),\s*(\d{1,2}\.\d{1,2}\.\d{4})/i);
+
+            if (!m) {
+                return { place: getDefaultIssuePlace(), datePl: new Date().toLocaleDateString('pl-PL') };
+            }
+
+            return {
+                place: String(m[1] || getDefaultIssuePlace()).trim(),
+                datePl: String(m[2] || new Date().toLocaleDateString('pl-PL')).trim()
+            };
+        }
+
+        function applyIssueMetaToContent(html, place, datePl) {
+            const safePlace = String(place || getDefaultIssuePlace()).trim() || getDefaultIssuePlace();
+            const safeDate = String(datePl || '').trim() || new Date().toLocaleDateString('pl-PL');
+            const fullDateLine = `${safePlace}, dnia ${safeDate} r.`;
+            let updated = String(html || '');
+
+            if (/<div class="date">[\s\S]*?<\/div>/i.test(updated)) {
+                return updated.replace(/<div class="date">[\s\S]*?<\/div>/i, `<div class="date">${fullDateLine}</div>`);
+            }
+
+            updated = updated.replace(/[^,\n<]+,\s*dnia\s*\d{1,2}\.\d{1,2}\.\d{4}\s*r\./i, fullDateLine);
+            updated = updated.replace(/[^,\n<]+,\s*\d{1,2}\.\d{1,2}\.\d{4}/i, fullDateLine);
+            return updated;
+        }
+
+        function refreshStep4IssueMetaControls() {
+            const placeEl = document.getElementById('step4IssuePlace');
+            const dateEl = document.getElementById('step4IssueDate');
+            const letter = allGeneratedLetters && allGeneratedLetters[currentLetterIndex];
+            if (!placeEl || !dateEl || !letter) return;
+
+            const meta = extractIssueMetaFromContent(letter.content);
+            const senderDefault = String((currentSender && currentSender.miasto) || '').trim();
+            const normalizedMetaPlace = String(meta.place || '').trim();
+            const isLegacyDefault = normalizedMetaPlace.toLowerCase() === 'łódź' || normalizedMetaPlace.toLowerCase() === 'lodz';
+            placeEl.value = senderDefault && (!normalizedMetaPlace || isLegacyDefault)
+                ? senderDefault
+                : (normalizedMetaPlace || getDefaultIssuePlace());
+            dateEl.value = parsePlDateToIso(meta.datePl) || new Date().toISOString().split('T')[0];
+        }
+
+        function applyStep4IssueMetaLive() {
+            const placeEl = document.getElementById('step4IssuePlace');
+            const dateEl = document.getElementById('step4IssueDate');
+            const letter = allGeneratedLetters && allGeneratedLetters[currentLetterIndex];
+            if (!placeEl || !dateEl || !letter) return;
+
+            const place = placeEl.value || getDefaultIssuePlace();
+            const datePl = formatIsoDateToPl(dateEl.value) || new Date().toLocaleDateString('pl-PL');
+            letter.content = applyIssueMetaToContent(letter.content, place, datePl);
+
+            const currentPreview = document.getElementById(`letter-${currentLetterIndex}`);
+            if (currentPreview) {
+                const body = currentPreview.querySelector('div[style*="min-height: 600px"]');
+                if (body) body.innerHTML = letter.content;
+            }
         }
 
         // Obsługa klawiszy strzałek
@@ -8017,53 +8151,13 @@ function copyFieldValue(inputId) {
         }
 
         function editLetterDate(index) {
-            const newDate = prompt('Podaj nową datę (DD.MM.RRRR):', new Date().toLocaleDateString('pl-PL'));
-            if (newDate && newDate.trim() !== '') {
-                const letter = allGeneratedLetters[index];
-
-                // Zaktualizuj datę w różnych formatach które mogą występować w dokumencie
-                const datePatterns = [
-                    /Łódź,\s*dnia\s*\d{1,2}[^\d]*\d{4}\s*r\./g,
-                    /Łódź,\s*\d{1,2}\.\d{1,2}\.\d{4}/g,
-                    /Łódź,\s*dnia\s*\d{1,2}\.\d{1,2}\.\d{4}\s*r\./g,
-                    /<div class="date">.*?<\/div>/g
-                ];
-
-                let updatedContent = letter.content;
-
-                // Zaktualizuj wszystkie możliwe formaty daty
-                datePatterns.forEach(pattern => {
-                    if (pattern.test(updatedContent)) {
-                        if (pattern.source.includes('class="date"')) {
-                            updatedContent = updatedContent.replace(pattern, `<div class="date">Łódź, dnia ${newDate} r.</div>`);
-                        } else {
-                            updatedContent = updatedContent.replace(pattern, `Łódź, dnia ${newDate} r.`);
-                        }
-                    }
-                });
-
-                // Jeśli nie znaleziono wzorców, spróbuj uniwersalnego
-                if (updatedContent === letter.content) {
-                    updatedContent = updatedContent.replace(/Łódź[^<\n]*/g, `Łódź, dnia ${newDate} r.`);
+            step4SelectLetter(index);
+            const dateInput = document.getElementById('step4IssueDate');
+            if (dateInput) {
+                dateInput.focus();
+                if (typeof dateInput.showPicker === 'function') {
+                    try { dateInput.showPicker(); } catch (e) {}
                 }
-
-                letter.content = updatedContent;
-                // Odśwież wyświetlany list
-                document.getElementById(`letter-${index}`).innerHTML = `
-                    <div style="margin-bottom: 20px; text-align: center; background: #f8f9fa; padding: 15px; border-radius: 8px;">
-                        <h3>${letter.title}</h3>
-                        <p style="margin: 5px 0; color: #6c757d;">Adresat: ${letter.bailiff ? letter.bailiff.imieNazwisko : 'Nieznany'}</p>
-                        <div style="margin-top: 10px;">
-                            <button class="btn-secondary btn btn-small" onclick="downloadLetter(${index}, 'doc')">📄 DOC</button>
-                            <button class="btn-secondary btn btn-small" onclick="downloadLetter(${index}, 'pdf')">📃 PDF</button>
-                            <button class="btn-secondary btn btn-small" onclick="copyLetter(${index})">📋 Kopiuj treść</button>
-                            <button class="btn-secondary btn btn-small" onclick="editLetterDate(${index})">📅 Zmień datę</button>
-                        </div>
-                    </div>
-                    <div style="min-height: 600px;">
-                        ${letter.content}
-                    </div>
-                `;
             }
         }
 
@@ -8634,10 +8728,12 @@ function copyFieldValue(inputId) {
                     document.getElementById('senderSelectText').textContent = displayText;
                     currentSender = sender;
                     renderSenderSelect(_sendersCache);
+                    refreshStep4IssueMetaControls();
                 }
             } else {
                 document.getElementById('senderSelectText').textContent = '-- Wybierz nadawcę odpowiedzi --';
                 currentSender = null;
+                refreshStep4IssueMetaControls();
             }
         }
 

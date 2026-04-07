@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 import requests
 import json
+import re
 import mimetypes
 from flask import Flask, request, jsonify, send_from_directory, send_file, redirect, url_for, render_template
 from flask_login import LoginManager, login_required, current_user
@@ -449,6 +450,29 @@ def _build_universal_letter_title(subtype, fields, recipient_name=''):
 
     return title
 
+
+def _normalize_street_unit(street_value):
+    """Normalizuje zapis lokalu: '3 58' -> '3/58' (fallback dla OCR)."""
+    street = str(street_value or '').strip()
+    if not street:
+        return ''
+
+    # Jeśli lokal już ma separator, nie ruszaj.
+    if '/' in street or ' m.' in street.lower() or 'm.' in street.lower():
+        return street
+
+    # Najczęstszy przypadek OCR: "Sapieżyńska 3 58".
+    street = re.sub(r'\b(\d+[A-Za-z]?)\s+(\d{1,4}[A-Za-z]?)\b', r'\1/\2', street)
+    return street
+
+
+def _compose_sender_address(street_value, postal_code, city):
+    """Składa adres nadawcy z osobną linią kod+miasto."""
+    street = _normalize_street_unit(street_value)
+    postal_city = " ".join(part for part in [str(postal_code or '').strip(), str(city or '').strip()] if part).strip()
+    lines = [line for line in [street, postal_city] if line]
+    return "<br>".join(lines) or 'ul. Przykładowa 1<br>90-001 Łódź'
+
 @app.route('/generate-letter', methods=['POST'])
 @login_required
 def generate_letter():
@@ -468,8 +492,7 @@ def generate_letter():
     sender_phone = (sender.get('telefon') or '').strip()
     sender_email = (sender.get('email') or '').strip()
 
-    sender_city_line = " ".join(part for part in [sender_postal, sender_city] if part).strip()
-    sender_address = ", ".join(part for part in [sender_street, sender_city_line] if part) or 'ul. Przykładowa 1, 90-001 Łódź'
+    sender_address = _compose_sender_address(sender_street, sender_postal, sender_city)
     sender_contact = " / ".join(part for part in [sender_phone, sender_email] if part)
     
     # Przygotowanie danych dla szablonu
@@ -635,8 +658,7 @@ def generate_zbieg_letters():
     sender_phone = (sender.get('telefon') or '').strip()
     sender_email = (sender.get('email') or '').strip()
 
-    sender_city_line = " ".join(part for part in [sender_postal, sender_city] if part).strip()
-    sender_address = ", ".join(part for part in [sender_street, sender_city_line] if part) or 'ul. Przykładowa 1, 90-001 Łódź'
+    sender_address = _compose_sender_address(sender_street, sender_postal, sender_city)
     sender_contact = " / ".join(part for part in [sender_phone, sender_email] if part)
     
     if len(all_bailiffs) < 2:
