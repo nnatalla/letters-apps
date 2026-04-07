@@ -5932,7 +5932,7 @@
             _dismissedAutoSenderKeys.clear();
             _dismissedAutoRecipientKeys.clear();
 
-            // Checkbox komornicze nadpisuje tryb — użytkownik decyduje o ścieżce
+            // Checkbox komornicze nadpisuje tryb — tylko wtedy uruchamiamy logikę komorniczą.
             if (isKomorniczeSelected) {
                 mode = 'komornicze';
                 // Bezpieczne domyślne struktury gdy AI nie wykryło komornicze
@@ -5940,6 +5940,8 @@
                 data.komornik = data.komornik || { imieNazwisko: '', adres: '', miasto: '', telefon: '', email: '' };
                 data.dluznik  = data.dluznik  || { imieNazwisko: '', pesel: '' };
                 data.sprawa   = data.sprawa   || { sygnaturaSprawy: '', numerRachunku: '' };
+            } else {
+                mode = 'universal';
             }
     // TRYB KOMORNICZY - stara logika bez zmian
         if (mode === 'komornicze') {
@@ -5978,7 +5980,7 @@
             if (step2FormSub)   step2FormSub.textContent   = 'Sprawdź i popraw dane wyekstrahowane z pisma komorniczego.';
 
             const pesel = data.dluznik.pesel;
-            if (pesel && pesel.length >= 10) {
+            if (isKomorniczeSelected && pesel && pesel.length >= 10) {
                 searchEmployeeInDatabase(pesel);
             }
 
