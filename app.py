@@ -936,6 +936,31 @@ def get_history_item(letter_id):
         return jsonify({"error": f"Błąd pobierania pisma: {str(e)}"}), 500
 
 
+@app.route('/api/history/<int:letter_id>/title', methods=['PUT'])
+@login_required
+def update_history_title(letter_id):
+    """Aktualizuje nazwę (tytuł) pisma w historii."""
+    try:
+        letter = orm_db.session.get(GeneratedLetter, letter_id)
+        if not letter or letter.user_id != current_user.id:
+            return jsonify({"error": "Pismo nie zostało znalezione."}), 404
+
+        data = request.get_json(silent=True) or {}
+        title = (data.get('title') or '').strip()
+
+        if len(title) < 2:
+            return jsonify({"error": "Nazwa pisma musi mieć co najmniej 2 znaki."}), 400
+        if len(title) > 180:
+            return jsonify({"error": "Nazwa pisma może mieć maksymalnie 180 znaków."}), 400
+
+        letter.title = title
+        orm_db.session.commit()
+        return jsonify({"success": True, "id": letter.id, "title": letter.title})
+    except Exception as e:
+        orm_db.session.rollback()
+        return jsonify({"error": f"Błąd aktualizacji nazwy pisma: {str(e)}"}), 500
+
+
 @app.route('/api/history/<int:letter_id>', methods=['DELETE'])
 @login_required
 def delete_history_item(letter_id):

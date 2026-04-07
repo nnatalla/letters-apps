@@ -1012,6 +1012,7 @@
         }
         .btn-hist:hover { filter: brightness(1.15); }
         .btn-hist-preview { background: #1e3a6e; color: #b8c4ff; border-color: rgba(184,196,255,.15); }
+        .btn-hist-edit    { background: #3b2f10; color: #f9d66b; border-color: rgba(249,214,107,.2); }
         .btn-hist-doc     { background: #0e3a42; color: #5ee7f5; border-color: rgba(94,231,245,.15); }
         .btn-hist-pdf     { background: #2e1f52; color: #c4a6ff; border-color: rgba(196,166,255,.15); }
         .btn-hist-del     { background: #3d1114; color: #ff8a8a; border-color: rgba(255,138,138,.15); }
@@ -2324,6 +2325,14 @@
         }
         .preview-modal-body .a4-frame .wrapper { background: white !important; }
         .preview-modal-body .a4-frame { background: #f5f5f5 !important; }
+        .preview-modal-body .wrapper,
+        .preview-modal-body .wrapper *,
+        .preview-modal-body .sender,
+        .preview-modal-body .sender *,
+        .preview-modal-body .recipient,
+        .preview-modal-body .recipient * {
+            color: #000000 !important;
+        }
 
         /* Step-4 inline divs injected by displayLetters() - override hardcoded backgrounds */
         #generatedLetters div[style*="background: #e7f3ff"],
@@ -3915,6 +3924,14 @@
         .step4-letter-btn-label  { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #b8c4ff; margin-bottom: 4px; }
         .step4-letter-btn-title  { font-size: 13px; font-weight: 600; color: #dce2f7; }
         .step4-letter-btn-sub    { font-size: 11px; color: #8e909f; margin-top: 3px; }
+        .step4-letter-item { display: flex; align-items: stretch; gap: 8px; }
+        .step4-letter-item .step4-letter-btn { flex: 1; }
+        .step4-letter-edit-btn {
+            width: 34px; min-width: 34px; border: 1px solid rgba(255,255,255,.1);
+            border-radius: 10px; background: #232a3a; color: #dce2f7;
+            cursor: pointer; font-size: 14px;
+        }
+        .step4-letter-edit-btn:hover { filter: brightness(1.12); }
         .step4-preview-panel     {
             background: #ffffff; border-radius: 16px; border: 1px solid rgba(37,99,235,.12);
             overflow: hidden; display: flex; flex-direction: column;
@@ -5437,6 +5454,9 @@
                 classification: classification || null,
                 fields: fields || []
             };
+
+            // Dla nowego pliku przywracamy auto-sugestie dodania nadawcy.
+            _dismissedAutoSenderKeys.clear();
 
             // Checkbox komornicze nadpisuje tryb — użytkownik decyduje o ścieżce
             if (isKomorniczeSelected) {
@@ -7155,6 +7175,7 @@ function copyFieldValue(inputId) {
                         allGeneratedLetters = [{
                             title: result.title,
                             content: result.list,
+                            letter_id: result.letter_id || null,
                             bailiff: { imieNazwisko: window.currentClassification.subtype }
                         }];
                         currentLetterIndex = 0;
@@ -7235,7 +7256,12 @@ function copyFieldValue(inputId) {
                     const result = await response.json();
 
                     if (response.ok) {
-                        allGeneratedLetters = [{ title: 'Wygenerowany List', content: result.list, bailiff: payload.dane.komornik }];
+                        allGeneratedLetters = [{
+                            title: 'Wygenerowany List',
+                            content: result.list,
+                            letter_id: result.letter_id || null,
+                            bailiff: payload.dane.komornik
+                        }];
                         currentLetterIndex = 0;
                         displayMultipleLetters(allGeneratedLetters);
                         goToStep(4);
@@ -7407,17 +7433,72 @@ function copyFieldValue(inputId) {
             if (!listEl) return;
             listEl.innerHTML = letters.map((l, i) => {
                 const adresat = l.bailiff ? l.bailiff.imieNazwisko : (l.recipient || '');
-                return `<button class="step4-letter-btn${i === 0 ? ' active' : ''}" onclick="step4SelectLetter(${i})">
-                    <div class="step4-letter-btn-label">LIST ${i + 1}</div>
-                    <div class="step4-letter-btn-meta">
-                        <div class="step4-letter-btn-title">${l.title || 'Odpowiedź'}</div>
-                        <div class="step4-letter-btn-sub">${adresat || 'Gotowy do pobrania'}</div>
-                    </div>
-                </button>`;
+                return `<div class="step4-letter-item">
+                    <button class="step4-letter-btn${i === 0 ? ' active' : ''}" onclick="step4SelectLetter(${i})">
+                        <div class="step4-letter-btn-label">LIST ${i + 1}</div>
+                        <div class="step4-letter-btn-meta">
+                            <div class="step4-letter-btn-title">${l.title || 'Odpowiedź'}</div>
+                            <div class="step4-letter-btn-sub">${adresat || 'Gotowy do pobrania'}</div>
+                        </div>
+                    </button>
+                    <button class="step4-letter-edit-btn" title="Edytuj nazwę" onclick="event.stopPropagation(); editStep4LetterTitle(${i})">✏️</button>
+                </div>`;
             }).join('');
             // Update preview filename
             const fname = document.getElementById('step4PreviewFilename');
             if (fname) fname.textContent = (letters[0] && letters[0].title ? letters[0].title.toLowerCase().replace(/\s+/g, '_') : 'odpowiedz') + '.docx';
+        }
+
+        async function updateHistoryLetterTitle(letterId, newTitle, silent) {
+            try {
+                const resp = await fetch(`/api/history/${letterId}/title`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: newTitle })
+                });
+                const result = await resp.json().catch(() => ({}));
+                if (!resp.ok) {
+                    if (!silent) showToast('Nie udało się zapisać nowej nazwy: ' + (result.error || 'Błąd serwera'), 'error');
+                    return false;
+                }
+                if (!silent) showToast('Nazwa pisma została zaktualizowana.', 'success');
+                return true;
+            } catch (e) {
+                if (!silent) showToast('Błąd połączenia przy zapisie nazwy.', 'error');
+                return false;
+            }
+        }
+
+        async function editStep4LetterTitle(index) {
+            const letter = allGeneratedLetters[index];
+            if (!letter) return;
+
+            const oldTitle = String(letter.title || 'Odpowiedź').trim();
+            const input = prompt('Podaj nową nazwę pisma:', oldTitle);
+            if (input === null) return;
+
+            const newTitle = String(input || '').trim();
+            if (!newTitle) {
+                showToast('Nazwa pisma nie może być pusta.', 'warning');
+                return;
+            }
+
+            letter.title = newTitle;
+            displayMultipleLetters(allGeneratedLetters);
+            step4SelectLetter(index);
+
+            if (letter.letter_id) {
+                const ok = await updateHistoryLetterTitle(letter.letter_id, newTitle, true);
+                if (!ok) {
+                    letter.title = oldTitle;
+                    displayMultipleLetters(allGeneratedLetters);
+                    step4SelectLetter(index);
+                    showToast('Nie udało się zapisać nowej nazwy w historii.', 'error');
+                    return;
+                }
+            }
+
+            showToast('Nazwa pisma została zmieniona.', 'success');
         }
 
         function step4SelectLetter(index) {
@@ -8054,6 +8135,33 @@ function copyFieldValue(inputId) {
                 .trim();
         }
 
+        function getFieldByValueAndLabel(fields, value, includeRegex) {
+            const target = normalizeSenderText(value);
+            if (!target) return null;
+            return (fields || []).find(f => {
+                const label = String((f && f.label) || '').toLowerCase();
+                const fieldValue = normalizeSenderText((f && f.value) || '');
+                if (!label || !fieldValue) return false;
+                if (includeRegex && !includeRegex.test(label)) return false;
+                return fieldValue === target;
+            }) || null;
+        }
+
+        function detectCandidateSide(fields, candidateName) {
+            const recipientLabelRegex = /adresat|odbiorca|do kogo|recipient|addressee/;
+            const senderLabelRegex = /nadawc|wystawc|wnioskodawc|od kogo|sender/;
+
+            if (getFieldByValueAndLabel(fields, candidateName, recipientLabelRegex)) return 'recipient';
+            if (getFieldByValueAndLabel(fields, candidateName, senderLabelRegex)) return 'sender';
+            return null;
+        }
+
+        function pickBySide(side, recipientValue, senderValue, fallbackValue) {
+            if (side === 'recipient') return recipientValue || senderValue || fallbackValue || '';
+            if (side === 'sender') return senderValue || recipientValue || fallbackValue || '';
+            return recipientValue || senderValue || fallbackValue || '';
+        }
+
         function getFieldValueByLabel(fields, regex) {
             const hit = (fields || []).find(f => regex.test((f.label || '').toLowerCase()));
             return hit && hit.value ? String(hit.value).trim() : '';
@@ -8123,7 +8231,9 @@ function copyFieldValue(inputId) {
                     senderLabels
                 );
 
-                adres = getEntityValue(entities, [
+                const side = detectCandidateSide(fields, nazwa);
+
+                const recipientAddress = getEntityValue(entities, [
                     'adresat_adres', 'odbiorca_adres', 'recipient_address', 'addressee_address'
                 ]) || getFieldValueByLabelFiltered(
                     fields,
@@ -8131,7 +8241,17 @@ function copyFieldValue(inputId) {
                     senderLabels
                 );
 
-                const miastoField = getEntityValue(entities, [
+                const senderAddress = getEntityValue(entities, [
+                    'nadawca_adres', 'wystawca_adres', 'sender_address'
+                ]) || getFieldValueByLabelFiltered(
+                    fields,
+                    /nadawca.*adres|wystawca.*adres|adres nadawcy|ulica nadawcy|adres korespondencyjny nadawcy/,
+                    /adresat|odbiorca/
+                );
+
+                adres = pickBySide(side, recipientAddress, senderAddress, '');
+
+                const recipientCity = getEntityValue(entities, [
                     'adresat_miasto', 'odbiorca_miasto', 'recipient_city', 'addressee_city'
                 ]) || getFieldValueByLabelFiltered(
                     fields,
@@ -8139,7 +8259,15 @@ function copyFieldValue(inputId) {
                     senderLabels
                 );
 
-                const kodField = getEntityValue(entities, [
+                const senderCity = getEntityValue(entities, [
+                    'nadawca_miasto', 'wystawca_miasto', 'sender_city'
+                ]) || getFieldValueByLabelFiltered(
+                    fields,
+                    /miasto nadawcy|nadawca.*miasto|wystawca.*miasto/,
+                    /adresat|odbiorca/
+                );
+
+                const recipientPostal = getEntityValue(entities, [
                     'adresat_kod_pocztowy', 'odbiorca_kod_pocztowy', 'recipient_postal_code', 'addressee_postal_code'
                 ]) || getFieldValueByLabelFiltered(
                     fields,
@@ -8147,10 +8275,18 @@ function copyFieldValue(inputId) {
                     senderLabels
                 );
 
-                miasto = miastoField;
-                kod_pocztowy = kodField;
+                const senderPostal = getEntityValue(entities, [
+                    'nadawca_kod_pocztowy', 'wystawca_kod_pocztowy', 'sender_postal_code'
+                ]) || getFieldValueByLabelFiltered(
+                    fields,
+                    /kod pocztowy nadawcy|nadawca.*kod pocztowy|wystawca.*kod pocztowy/,
+                    /adresat|odbiorca/
+                );
 
-                telefon = getEntityValue(entities, [
+                miasto = pickBySide(side, recipientCity, senderCity, '');
+                kod_pocztowy = pickBySide(side, recipientPostal, senderPostal, '');
+
+                const recipientPhone = getEntityValue(entities, [
                     'adresat_telefon', 'odbiorca_telefon', 'recipient_phone', 'addressee_phone'
                 ]) || getFieldValueByLabelFiltered(
                     fields,
@@ -8158,13 +8294,33 @@ function copyFieldValue(inputId) {
                     senderLabels
                 );
 
-                email = getEntityValue(entities, [
+                const senderPhone = getEntityValue(entities, [
+                    'nadawca_telefon', 'wystawca_telefon', 'sender_phone'
+                ]) || getFieldValueByLabelFiltered(
+                    fields,
+                    /telefon nadawcy|nadawca.*telefon|wystawca.*telefon/,
+                    /adresat|odbiorca/
+                );
+
+                telefon = pickBySide(side, recipientPhone, senderPhone, '');
+
+                const recipientEmail = getEntityValue(entities, [
                     'adresat_email', 'odbiorca_email', 'recipient_email', 'addressee_email'
                 ]) || getFieldValueByLabelFiltered(
                     fields,
                     /email adresata|e-mail adresata|email odbiorcy|e-mail odbiorcy|adresat.*email|odbiorca.*email/,
                     senderLabels
                 );
+
+                const senderEmail = getEntityValue(entities, [
+                    'nadawca_email', 'wystawca_email', 'sender_email'
+                ]) || getFieldValueByLabelFiltered(
+                    fields,
+                    /email nadawcy|e-mail nadawcy|nadawca.*email|wystawca.*email/,
+                    /adresat|odbiorca/
+                );
+
+                email = pickBySide(side, recipientEmail, senderEmail, '');
             }
 
             nazwa = nazwa.replace(/^pani\s+|^pan\s+/i, '').trim();
@@ -8881,9 +9037,13 @@ function copyFieldValue(inputId) {
 
         async function deleteSender(id) {
             if (!confirm('Usunąć tego nadawcę?')) return;
+            const senderToDelete = (_sendersCache || []).find(s => s.id === id);
             try {
                 const resp = await fetch(`/api/senders/${id}`, { method: 'DELETE' });
                 if (resp.ok) {
+                    if (senderToDelete && senderToDelete.nazwa) {
+                        _dismissedAutoSenderKeys.delete(normalizeSenderText(senderToDelete.nazwa));
+                    }
                     if (currentSender && currentSender.id === id) {
                         currentSender = null;
                         selectSenderOption(null);
@@ -9028,6 +9188,7 @@ function copyFieldValue(inputId) {
                         </div>
                     </div>
                     <div class="history-card-actions">
+                        <button class="btn-hist btn-hist-edit" onclick="editHistoryTitle(${l.id}, '${(l.title || '').replace(/'/g, "\\'")}')">✏️ Nazwa</button>
                         <button class="btn-hist btn-hist-preview" onclick="previewLetter(${l.id})">👁️ Podgląd</button>
                         <button class="btn-hist btn-hist-doc" onclick="downloadFromHistory(${l.id}, 'doc')">📄 DOC</button>
                         <button class="btn-hist btn-hist-pdf" onclick="downloadFromHistory(${l.id}, 'pdf')">📃 PDF</button>
@@ -9035,6 +9196,26 @@ function copyFieldValue(inputId) {
                     </div>
                 </div>
             `).join('') + '</div>';
+        }
+
+        async function editHistoryTitle(id, currentTitle) {
+            const input = prompt('Podaj nową nazwę pisma:', String(currentTitle || '').trim());
+            if (input === null) return;
+
+            const newTitle = String(input || '').trim();
+            if (!newTitle) {
+                showToast('Nazwa pisma nie może być pusta.', 'warning');
+                return;
+            }
+
+            const ok = await updateHistoryLetterTitle(id, newTitle, false);
+            if (!ok) return;
+
+            const idx = (_historyLetters || []).findIndex(l => l.id === id);
+            if (idx >= 0) _historyLetters[idx].title = newTitle;
+
+            const q = (document.querySelector('.history-search-input') || {}).value || '';
+            renderHistoryList(getFilteredHistory(q));
         }
 
         function getFilteredHistory(searchQuery = '') {
