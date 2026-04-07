@@ -3932,6 +3932,29 @@
             cursor: pointer; font-size: 14px;
         }
         .step4-letter-edit-btn:hover { filter: brightness(1.12); }
+        .step4-title-inline-wrap { display: flex; align-items: center; gap: 6px; }
+        .step4-title-inline-input {
+            width: 100%; min-width: 0;
+            border: 1px solid rgba(184,196,255,.35);
+            border-radius: 8px;
+            background: rgba(20,27,43,.8);
+            color: #dce2f7;
+            padding: 6px 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .step4-title-inline-input:focus {
+            outline: none;
+            border-color: #b8c4ff;
+            box-shadow: 0 0 0 2px rgba(184,196,255,.18);
+        }
+        .step4-title-inline-action {
+            width: 24px; height: 24px; border-radius: 6px;
+            border: 1px solid rgba(255,255,255,.12);
+            background: #232a3a; color: #dce2f7; cursor: pointer;
+            font-size: 12px; line-height: 1;
+        }
+        .step4-title-inline-action:hover { filter: brightness(1.14); }
         .step4-preview-panel     {
             background: #ffffff; border-radius: 16px; border: 1px solid rgba(37,99,235,.12);
             overflow: hidden; display: flex; flex-direction: column;
@@ -5261,6 +5284,7 @@
         let bailiffsList = [];
         let currentLetterIndex = 0;
         let allGeneratedLetters = [];
+        let _step4EditingTitleIndex = null;
         let currentSender = null;  // wybrany nadawca pisma
         let editingSenderId = null; // id nadawcy edytowanego w modalu
         let _historyLetters = [];  // historia pism - musi być na górze aby uniknąć "before initialization"
@@ -7433,20 +7457,41 @@ function copyFieldValue(inputId) {
             if (!listEl) return;
             listEl.innerHTML = letters.map((l, i) => {
                 const adresat = l.bailiff ? l.bailiff.imieNazwisko : (l.recipient || '');
+                const safeTitle = String(l.title || 'Odpowiedź')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+                const editing = _step4EditingTitleIndex === i;
+                const titleMarkup = editing
+                    ? `<div class="step4-title-inline-wrap" onclick="event.stopPropagation()">
+                        <input id="step4TitleInput-${i}" class="step4-title-inline-input" value="${safeTitle}" onkeydown="onStep4TitleInputKeydown(${i}, event)">
+                        <button class="step4-title-inline-action" title="Zapisz" onclick="event.stopPropagation(); saveStep4TitleInline(${i})">✓</button>
+                        <button class="step4-title-inline-action" title="Anuluj" onclick="event.stopPropagation(); cancelStep4TitleEdit()">✕</button>
+                    </div>`
+                    : `<div class="step4-letter-btn-title">${safeTitle}</div>`;
                 return `<div class="step4-letter-item">
                     <button class="step4-letter-btn${i === 0 ? ' active' : ''}" onclick="step4SelectLetter(${i})">
                         <div class="step4-letter-btn-label">LIST ${i + 1}</div>
                         <div class="step4-letter-btn-meta">
-                            <div class="step4-letter-btn-title">${l.title || 'Odpowiedź'}</div>
+                            ${titleMarkup}
                             <div class="step4-letter-btn-sub">${adresat || 'Gotowy do pobrania'}</div>
                         </div>
                     </button>
-                    <button class="step4-letter-edit-btn" title="Edytuj nazwę" onclick="event.stopPropagation(); editStep4LetterTitle(${i})">✏️</button>
+                    <button class="step4-letter-edit-btn" title="Edytuj nazwę" onclick="event.stopPropagation(); startStep4TitleEdit(${i})">✏️</button>
                 </div>`;
             }).join('');
             // Update preview filename
             const fname = document.getElementById('step4PreviewFilename');
             if (fname) fname.textContent = (letters[0] && letters[0].title ? letters[0].title.toLowerCase().replace(/\s+/g, '_') : 'odpowiedz') + '.docx';
+
+            if (_step4EditingTitleIndex !== null) {
+                const input = document.getElementById(`step4TitleInput-${_step4EditingTitleIndex}`);
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }
         }
 
         async function updateHistoryLetterTitle(letterId, newTitle, silent) {
@@ -7458,46 +7503,74 @@ function copyFieldValue(inputId) {
                 });
                 const result = await resp.json().catch(() => ({}));
                 if (!resp.ok) {
-                    if (!silent) showToast('Nie udało się zapisać nowej nazwy: ' + (result.error || 'Błąd serwera'), 'error');
-                    return false;
+                    const msg = result.error || `Błąd serwera (${resp.status})`;
+                    if (!silent) showToast('Nie udało się zapisać nowej nazwy: ' + msg, 'error');
+                    return { ok: false, error: msg };
                 }
                 if (!silent) showToast('Nazwa pisma została zaktualizowana.', 'success');
-                return true;
+                return { ok: true };
             } catch (e) {
-                if (!silent) showToast('Błąd połączenia przy zapisie nazwy.', 'error');
-                return false;
+                const msg = 'Błąd połączenia przy zapisie nazwy.';
+                if (!silent) showToast(msg, 'error');
+                return { ok: false, error: msg };
             }
         }
 
-        async function editStep4LetterTitle(index) {
+        function startStep4TitleEdit(index) {
+            _step4EditingTitleIndex = index;
+            buildStep4LetterSidebar(allGeneratedLetters);
+            step4SelectLetter(index);
+        }
+
+        function cancelStep4TitleEdit() {
+            _step4EditingTitleIndex = null;
+            buildStep4LetterSidebar(allGeneratedLetters);
+            step4SelectLetter(currentLetterIndex);
+        }
+
+        function onStep4TitleInputKeydown(index, event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                saveStep4TitleInline(index);
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                cancelStep4TitleEdit();
+            }
+        }
+
+        async function saveStep4TitleInline(index) {
             const letter = allGeneratedLetters[index];
             if (!letter) return;
 
+            const inputEl = document.getElementById(`step4TitleInput-${index}`);
+            if (!inputEl) return;
             const oldTitle = String(letter.title || 'Odpowiedź').trim();
-            const input = prompt('Podaj nową nazwę pisma:', oldTitle);
-            if (input === null) return;
-
-            const newTitle = String(input || '').trim();
+            const newTitle = String(inputEl.value || '').trim();
             if (!newTitle) {
                 showToast('Nazwa pisma nie może być pusta.', 'warning');
+                inputEl.focus();
+                return;
+            }
+
+            if (newTitle === oldTitle) {
+                cancelStep4TitleEdit();
                 return;
             }
 
             letter.title = newTitle;
-            displayMultipleLetters(allGeneratedLetters);
-            step4SelectLetter(index);
 
             if (letter.letter_id) {
-                const ok = await updateHistoryLetterTitle(letter.letter_id, newTitle, true);
-                if (!ok) {
+                const saveResult = await updateHistoryLetterTitle(letter.letter_id, newTitle, true);
+                if (!saveResult.ok) {
                     letter.title = oldTitle;
-                    displayMultipleLetters(allGeneratedLetters);
-                    step4SelectLetter(index);
-                    showToast('Nie udało się zapisać nowej nazwy w historii.', 'error');
+                    showToast('Nie udało się zapisać nowej nazwy w historii: ' + (saveResult.error || 'nieznany błąd'), 'error');
                     return;
                 }
             }
 
+            _step4EditingTitleIndex = null;
+            displayMultipleLetters(allGeneratedLetters);
+            step4SelectLetter(index);
             showToast('Nazwa pisma została zmieniona.', 'success');
         }
 
@@ -9208,8 +9281,8 @@ function copyFieldValue(inputId) {
                 return;
             }
 
-            const ok = await updateHistoryLetterTitle(id, newTitle, false);
-            if (!ok) return;
+            const saveResult = await updateHistoryLetterTitle(id, newTitle, false);
+            if (!saveResult.ok) return;
 
             const idx = (_historyLetters || []).findIndex(l => l.id === id);
             if (idx >= 0) _historyLetters[idx].title = newTitle;
