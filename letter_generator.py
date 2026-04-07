@@ -55,6 +55,14 @@ def _normalize_sender_address_lines(sender: dict, fallback_city: str):
     if not street_from_parts:
       street_from_parts = part
 
+  # Przypadek jednolinijkowy: "Za Dworcem 3/58 77-400 Złotów"
+  # Zachowaj część ulicy (w tym '/') po lewej stronie kodu pocztowego.
+  if not street_from_parts and postal_city_from_parts:
+    m = re.match(r'^(.*?)\s*(\d{2}-\d{3}.*)$', raw_address)
+    if m:
+      street_from_parts = (m.group(1) or '').strip().rstrip(',')
+      postal_city_from_parts = (m.group(2) or '').strip()
+
   street = street_from_parts or raw_address
   if postal_re.search(street):
     street = ''
