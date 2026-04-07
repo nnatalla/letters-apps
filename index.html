@@ -3964,26 +3964,29 @@
             border-color: #b8c4ff;
             box-shadow: 0 0 0 2px rgba(184,196,255,.18);
         }
-        .step4-title-editor-actions {
-            height: 22px;
-            margin-top: 4px;
-            display: flex;
-            justify-content: flex-end;
-            gap: 6px;
-        }
         .step4-letter-item { display: flex; align-items: stretch; gap: 8px; }
         .step4-letter-item .step4-letter-btn { flex: 1; }
+        .step4-letter-edit-stack {
+            width: 34px;
+            min-width: 34px;
+            height: 86px;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: flex-start;
+            gap: 6px;
+        }
         .step4-letter-edit-btn {
             width: 34px; min-width: 34px; border: 1px solid rgba(255,255,255,.1);
             border-radius: 10px; background: #232a3a; color: #dce2f7;
-            cursor: pointer; font-size: 14px;
+            cursor: pointer; font-size: 14px; height: 34px;
         }
         .step4-letter-edit-btn:hover { filter: brightness(1.12); }
         .step4-title-inline-action {
-            width: 24px; height: 24px; border-radius: 6px;
+            width: 34px; height: 34px; border-radius: 10px;
             border: 1px solid rgba(255,255,255,.12);
             background: #232a3a; color: #dce2f7; cursor: pointer;
-            font-size: 12px; line-height: 1;
+            font-size: 14px; line-height: 1;
         }
         .step4-title-inline-action:hover { filter: brightness(1.14); }
         .step4-preview-panel     {
@@ -7498,12 +7501,16 @@ function copyFieldValue(inputId) {
                     <div class="step4-letter-btn-title step4-title-text">${safeTitle}</div>
                     ${editing ? `<div class="step4-title-editor-overlay">
                         <textarea id="step4TitleInput-${i}" class="step4-title-editor-textarea" onkeydown="onStep4TitleInputKeydown(${i}, event)">${safeTitle}</textarea>
-                        <div class="step4-title-editor-actions">
-                            <button class="step4-title-inline-action" title="Zapisz (Ctrl+Enter)" onclick="event.stopPropagation(); saveStep4TitleInline(${i})">✓</button>
-                            <button class="step4-title-inline-action" title="Anuluj (Esc)" onclick="event.stopPropagation(); cancelStep4TitleEdit()">✕</button>
-                        </div>
                     </div>` : ''}
                 </div>`;
+                const editControlsMarkup = editing
+                    ? `<div class="step4-letter-edit-stack">
+                        <button class="step4-title-inline-action" title="Zapisz (Ctrl+Enter)" onclick="event.stopPropagation(); saveStep4TitleInline(${i})">✓</button>
+                        <button class="step4-title-inline-action" title="Anuluj (Esc)" onclick="event.stopPropagation(); cancelStep4TitleEdit()">✕</button>
+                    </div>`
+                    : `<div class="step4-letter-edit-stack">
+                        <button class="step4-letter-edit-btn" title="Edytuj nazwę" onclick="event.stopPropagation(); startStep4TitleEdit(${i})">✏️</button>
+                    </div>`;
                 return `<div class="step4-letter-item">
                     <button class="step4-letter-btn${i === 0 ? ' active' : ''}" onclick="step4SelectLetter(${i})">
                         <div class="step4-letter-btn-label">LIST ${i + 1}</div>
@@ -7512,7 +7519,7 @@ function copyFieldValue(inputId) {
                             <div class="step4-letter-btn-sub">${adresat || 'Gotowy do pobrania'}</div>
                         </div>
                     </button>
-                    <button class="step4-letter-edit-btn" title="Edytuj nazwę" onclick="event.stopPropagation(); startStep4TitleEdit(${i})">✏️</button>
+                    ${editControlsMarkup}
                 </div>`;
             }).join('');
             // Update preview filename
