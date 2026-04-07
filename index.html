@@ -10121,8 +10121,19 @@ function copyFieldValue(inputId) {
 
         var currentPreviewId = null;  // var żeby było dostępne jako window.currentPreviewId w onclick atrybutach
 
+        function isHistoryKomorniczeLetter(letter) {
+            const docType = String((letter && letter.document_type) || '').toLowerCase();
+            const subtype = String((letter && letter.subtype) || '').toLowerCase();
+            return Boolean(letter && letter.is_komornicze)
+                || docType === 'komornicze'
+                || docType.includes('komorn')
+                || subtype === 'komornicze'
+                || subtype.includes('komorn');
+        }
+
         function getHistoryIcon(doc_type, subtype) {
-            if (doc_type === 'komornicze' || (subtype || '').toLowerCase().includes('komorni')) return '⚖️';
+            const docTypeLower = String(doc_type || '').toLowerCase();
+            if (docTypeLower === 'komornicze' || docTypeLower.includes('komorn') || (subtype || '').toLowerCase().includes('komorni')) return '⚖️';
             const st = (subtype || '').toLowerCase();
             if (st.includes('szkol') || st.includes('szkoł')) return '🏫';
             if (st.includes('uczel')) return '🎓';
@@ -10208,8 +10219,8 @@ function copyFieldValue(inputId) {
                 const cntKom = document.getElementById('bentoCntKomornicze');
                 const cntUni = document.getElementById('bentoCntUniversal');
                 if (cntAll) cntAll.textContent = letters.length;
-                if (cntKom) cntKom.textContent = letters.filter(l => l.is_komornicze || l.subtype === 'komornicze').length;
-                if (cntUni) cntUni.textContent = letters.filter(l => !l.is_komornicze && l.subtype !== 'komornicze').length;
+                if (cntKom) cntKom.textContent = letters.filter(isHistoryKomorniczeLetter).length;
+                if (cntUni) cntUni.textContent = letters.filter(l => !isHistoryKomorniczeLetter(l)).length;
 
                 // Populate sender filter
                 const selNadawca = document.getElementById('histFilterNadawca');
@@ -10331,8 +10342,8 @@ function copyFieldValue(inputId) {
 
             let filtered = _historyLetters;
             if (nadawca) filtered = filtered.filter(l => (l.sender_name || l.sender) === nadawca);
-            if (typ === 'komornicze') filtered = filtered.filter(l => l.is_komornicze || l.subtype === 'komornicze');
-            if (typ === 'universal') filtered = filtered.filter(l => !l.is_komornicze && l.subtype !== 'komornicze');
+            if (typ === 'komornicze') filtered = filtered.filter(isHistoryKomorniczeLetter);
+            if (typ === 'universal') filtered = filtered.filter(l => !isHistoryKomorniczeLetter(l));
             if (q) {
                 filtered = filtered.filter(l =>
                     (l.title || '').toLowerCase().includes(q) ||
