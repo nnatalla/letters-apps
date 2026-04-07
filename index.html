@@ -10395,14 +10395,70 @@ function copyFieldValue(inputId) {
             showSendersListPage();
         }
 
+        function normalizePartyAddressFields(rawAdres, rawKod, rawMiasto) {
+            const clean = (v) => String(v || '').replace(/\s+/g, ' ').trim().replace(/^,+|,+$/g, '').trim();
+            const postalRe = /\b\d{2}-\d{3}\b/;
+
+            const adresIn = clean(rawAdres);
+            const kodIn = clean(rawKod);
+            const miastoIn = clean(rawMiasto);
+
+            let adres = adresIn;
+            let kod = '';
+            let miasto = miastoIn;
+
+            const merged = clean([adresIn, kodIn, miastoIn].filter(Boolean).join(', '));
+            const m = merged.match(postalRe);
+
+            if (m) {
+                kod = m[0];
+                const idx = merged.indexOf(kod);
+                const before = clean(merged.slice(0, idx));
+                const after = clean(merged.slice(idx + kod.length));
+
+                const partsAfter = after.split(',').map(clean).filter(Boolean);
+                const cityAfter = partsAfter.length ? partsAfter[0] : '';
+                const streetAfter = partsAfter.slice(1).join(', ').trim();
+
+                miasto = clean(cityAfter || miastoIn.replace(postalRe, ''));
+                adres = clean([before, streetAfter].filter(Boolean).join(', '));
+
+                if (!adres) {
+                    const adresNoPostal = clean(adresIn.replace(postalRe, ''));
+                    if (adresNoPostal && normalizeSenderText(adresNoPostal) !== normalizeSenderText(miasto)) {
+                        adres = adresNoPostal;
+                    }
+                }
+            } else {
+                kod = clean((kodIn.match(postalRe) || [])[0] || '');
+                miasto = clean(miastoIn.replace(postalRe, ''));
+                adres = adresIn;
+            }
+
+            // Ostateczne czyszczenie z ewentualnego kodu pocztowego w niewłaściwym polu.
+            adres = clean(adres.replace(postalRe, ''));
+            miasto = clean(miasto.replace(postalRe, ''));
+
+            return {
+                adres,
+                kod_pocztowy: kod,
+                miasto
+            };
+        }
+
         async function saveSender() {
             const nazwa = document.getElementById('senderNazwa').value.trim();
             if (!nazwa) { alert('Pole Nazwa jest wymagane!'); return; }
+            const normalizedAddress = normalizePartyAddressFields(
+                document.getElementById('senderAdres').value,
+                document.getElementById('senderKod').value,
+                document.getElementById('senderMiasto').value
+            );
             const body = {
                 nazwa,
-                adres: document.getElementById('senderAdres').value.trim(),
-                miasto: document.getElementById('senderMiasto').value.trim(),
-                kod_pocztowy: document.getElementById('senderKod').value.trim(),
+                adres: normalizedAddress.adres,
+                miasto: normalizedAddress.miasto,
+                kod_pocztowy: normalizedAddress.kod_pocztowy,
                 telefon: document.getElementById('senderTelefon').value.trim(),
                 email: document.getElementById('senderEmail').value.trim(),
                 kategoria: document.getElementById('senderKategoria').value
@@ -10501,11 +10557,17 @@ function copyFieldValue(inputId) {
             const nazwa = document.getElementById('recipientNazwa').value.trim();
             if (!nazwa) { alert('Pole Nazwa jest wymagane!'); return; }
 
+            const normalizedAddress = normalizePartyAddressFields(
+                document.getElementById('recipientAdres').value,
+                document.getElementById('recipientKod').value,
+                document.getElementById('recipientMiasto').value
+            );
+
             const body = {
                 nazwa,
-                adres: document.getElementById('recipientAdres').value.trim(),
-                miasto: document.getElementById('recipientMiasto').value.trim(),
-                kod_pocztowy: document.getElementById('recipientKod').value.trim(),
+                adres: normalizedAddress.adres,
+                miasto: normalizedAddress.miasto,
+                kod_pocztowy: normalizedAddress.kod_pocztowy,
                 telefon: document.getElementById('recipientTelefon').value.trim(),
                 email: document.getElementById('recipientEmail').value.trim(),
                 kategoria: document.getElementById('recipientKategoria').value
