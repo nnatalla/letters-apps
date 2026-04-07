@@ -1001,6 +1001,24 @@
             font-weight: 600; font-size: 14px; color: #dce2f7;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
+        .history-card-title-input {
+            width: 100%;
+            min-height: 56px;
+            border: 1px solid rgba(184,196,255,.28);
+            border-radius: 8px;
+            background: rgba(20,27,43,.95);
+            color: #dce2f7;
+            padding: 8px 10px;
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.25;
+            resize: none;
+        }
+        .history-card-title-input:focus {
+            outline: none;
+            border-color: #b8c4ff;
+            box-shadow: 0 0 0 2px rgba(184,196,255,.16);
+        }
         .history-card-meta { font-size: 11px; color: #8e909f; margin-top: 2px; }
 
         .history-card-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
@@ -3948,7 +3966,7 @@
         }
         .step4-title-editor-textarea {
             width: 100%;
-            height: calc(100% - 28px);
+            height: 100%;
             resize: none;
             border: 1px solid rgba(184,196,255,.35);
             border-radius: 6px;
@@ -5322,6 +5340,7 @@
         let currentSender = null;  // wybrany nadawca pisma
         let editingSenderId = null; // id nadawcy edytowanego w modalu
         let _historyLetters = [];  // historia pism - musi być na górze aby uniknąć "before initialization"
+        let _historyEditingId = null;
         let _dismissedAutoSenderKeys = new Set();
         var isKomorniczeSelected = false; // checkbox komornicze - var bo używane z onclick HTML
 
@@ -9296,13 +9315,17 @@ function copyFieldValue(inputId) {
                 <div class="history-card" id="hcard-${l.id}" style="--card-delay:${Math.min(i * 45, 280)}ms;">
                     <div class="history-card-icon">${getHistoryIcon(l.document_type, l.subtype)}</div>
                     <div class="history-card-info">
-                        <div class="history-card-title" title="${(l.title || '').replace(/"/g,'&quot;')}">${l.title || 'Bez tytułu'}</div>
+                        ${_historyEditingId === l.id
+                            ? `<textarea id="historyTitleInput-${l.id}" class="history-card-title-input" onkeydown="onHistoryTitleInputKeydown(${l.id}, event)">${String(l.title || 'Bez tytułu').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>`
+                            : `<div class="history-card-title" title="${String(l.title || '').replace(/&/g, '&amp;').replace(/"/g,'&quot;')}">${String(l.title || 'Bez tytułu').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`}
                         <div class="history-card-meta">
                             ${l.recipient_name ? `Do: ${l.recipient_name} &nbsp;•&nbsp; ` : ''}${formatHistoryDate(l.created_at)}
                         </div>
                     </div>
                     <div class="history-card-actions">
-                        <button class="btn-hist btn-hist-edit" onclick="editHistoryTitle(${l.id}, '${(l.title || '').replace(/'/g, "\\'")}')">✏️ Nazwa</button>
+                        ${_historyEditingId === l.id
+                            ? `<button class="btn-hist btn-hist-edit" onclick="saveHistoryTitleInline(${l.id})">✓ OK</button><button class="btn-hist" onclick="cancelHistoryTitleEdit()">✕ X</button>`
+                            : `<button class="btn-hist btn-hist-edit" onclick="editHistoryTitle(${l.id})">✏️ Nazwa</button>`}
                         <button class="btn-hist btn-hist-preview" onclick="previewLetter(${l.id})">👁️ Podgląd</button>
                         <button class="btn-hist btn-hist-doc" onclick="downloadFromHistory(${l.id}, 'doc')">📄 DOC</button>
                         <button class="btn-hist btn-hist-pdf" onclick="downloadFromHistory(${l.id}, 'pdf')">📃 PDF</button>
@@ -9310,23 +9333,62 @@ function copyFieldValue(inputId) {
                     </div>
                 </div>
             `).join('') + '</div>';
+
+            if (_historyEditingId !== null) {
+                const input = document.getElementById(`historyTitleInput-${_historyEditingId}`);
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }
         }
 
-        async function editHistoryTitle(id, currentTitle) {
-            const input = prompt('Podaj nową nazwę pisma:', String(currentTitle || '').trim());
-            if (input === null) return;
+        function editHistoryTitle(id) {
+            _historyEditingId = id;
+            const q = (document.querySelector('.history-search-input') || {}).value || '';
+            renderHistoryList(getFilteredHistory(q));
+        }
 
-            const newTitle = String(input || '').trim();
+        function cancelHistoryTitleEdit() {
+            _historyEditingId = null;
+            const q = (document.querySelector('.history-search-input') || {}).value || '';
+            renderHistoryList(getFilteredHistory(q));
+        }
+
+        function onHistoryTitleInputKeydown(id, event) {
+            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                event.preventDefault();
+                saveHistoryTitleInline(id);
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                cancelHistoryTitleEdit();
+            }
+        }
+
+        async function saveHistoryTitleInline(id) {
+            const inputEl = document.getElementById(`historyTitleInput-${id}`);
+            if (!inputEl) return;
+
+            const idx = (_historyLetters || []).findIndex(l => l.id === id);
+            const oldTitle = idx >= 0 ? String(_historyLetters[idx].title || '').trim() : '';
+            const newTitle = String(inputEl.value || '').trim();
+
             if (!newTitle) {
                 showToast('Nazwa pisma nie może być pusta.', 'warning');
+                inputEl.focus();
+                return;
+            }
+
+            if (newTitle === oldTitle) {
+                cancelHistoryTitleEdit();
                 return;
             }
 
             const saveResult = await updateHistoryLetterTitle(id, newTitle, false);
             if (!saveResult.ok) return;
 
-            const idx = (_historyLetters || []).findIndex(l => l.id === id);
             if (idx >= 0) _historyLetters[idx].title = newTitle;
+            _historyEditingId = null;
 
             const q = (document.querySelector('.history-search-input') || {}).value || '';
             renderHistoryList(getFilteredHistory(q));
