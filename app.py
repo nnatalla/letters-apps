@@ -434,8 +434,9 @@ def generate_letter():
         """
 
         try:
-            if user_instructions and user_instructions.strip():
-                specific_content += f'<p style="margin-top:16px; padding:12px; background:#fffde7; border-left:4px solid #f9a825; font-style:italic;"><strong>Uwagi dodatkowe:</strong> {user_instructions}</p>'
+            specific_content = apply_user_instructions_to_content(
+                specific_content, user_instructions, content_type
+            )
             generated_content = generate_letter_with_template(
                 content_type, sender_data, recipient_data, dane, specific_content
             )
@@ -466,8 +467,9 @@ def generate_letter():
         """
 
         try:
-            if user_instructions and user_instructions.strip():
-                specific_content += f'<p style="margin-top:16px; padding:12px; background:#fffde7; border-left:4px solid #f9a825; font-style:italic;"><strong>Uwagi dodatkowe:</strong> {user_instructions}</p>'
+            specific_content = apply_user_instructions_to_content(
+                specific_content, user_instructions, content_type
+            )
             generated_content = generate_letter_with_template(
                 content_type, sender_data, recipient_data, dane, specific_content
             )
@@ -507,8 +509,9 @@ def generate_letter():
         """
 
         try:
-            if user_instructions and user_instructions.strip():
-                specific_content += f'<p style="margin-top:16px; padding:12px; background:#fffde7; border-left:4px solid #f9a825; font-style:italic;"><strong>Uwagi dodatkowe:</strong> {user_instructions}</p>'
+            specific_content = apply_user_instructions_to_content(
+                specific_content, user_instructions, content_type
+            )
             generated_content = generate_letter_with_template(
                 content_type, sender_data, recipient_data, dane, specific_content
             )
@@ -621,8 +624,9 @@ def generate_zbieg_letters():
         """
         
         try:
-            if user_instructions and user_instructions.strip():
-                specific_content += f'<p style="margin-top:16px; padding:12px; background:#fffde7; border-left:4px solid #f9a825; font-style:italic;"><strong>Uwagi dodatkowe:</strong> {user_instructions}</p>'
+            specific_content = apply_user_instructions_to_content(
+                specific_content, user_instructions, content_type
+            )
             generated_content = generate_letter_with_template(
                 content_type, sender_data, recipient_data, dane, specific_content
             )
@@ -720,6 +724,58 @@ def get_bailiff_greeting(gender):
     else:
         return "Szanowny Panie Komorniku"
 
+def apply_user_instructions_to_content(base_html, user_instructions, content_type):
+    """Modyfikuje treść akapitów zgodnie z instrukcjami użytkownika bez dodawania sekcji 'Uwagi dodatkowe'."""
+    instructions = (user_instructions or '').strip()
+    if not instructions:
+        return base_html
+
+    prompt = f"""
+Przepisz treść pisma (HTML) zgodnie z instrukcjami użytkownika.
+
+WYMAGANIA:
+- Zwróć wyłącznie HTML akapitów (np. <p>...</p>), bez markdown i bez komentarzy.
+- Zachowaj formalny styl urzędowy.
+- Zachowaj kluczowe fakty i dane (imiona, PESEL, sygnatura, itp.), chyba że instrukcja wyraźnie każe inaczej.
+- NIE dodawaj osobnej sekcji typu "Uwagi dodatkowe".
+- Zachowaj poprawność językową i logiczny układ.
+
+Typ pisma: {content_type}
+Instrukcje użytkownika:
+{instructions}
+
+Treść wejściowa HTML:
+{base_html}
+"""
+
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.1
+    }
+
+    try:
+        response = requests.post(GROQ_API_URL, headers=headers, json=data, timeout=45)
+        response.raise_for_status()
+        out = response.json()['choices'][0]['message']['content'].strip()
+
+        if '```' in out:
+            parts = out.split('```')
+            for chunk in parts:
+                chunk = chunk.strip()
+                if chunk.startswith('html'):
+                    chunk = chunk[4:].strip()
+                if '<p' in chunk:
+                    out = chunk
+                    break
+
+        return out or base_html
+    except Exception:
+        return base_html
 def generate_letter_with_template(content_type, sender_data, recipient_data, case_data, specific_content):
     """Generuje list na podstawie szablonu HTML poprzez proste zastępowanie tekstu"""
     template = load_html_template()
@@ -876,9 +932,8 @@ def generate_universal_letter():
             "title": f"Odpowiedź na pismo: {subtype}",
             "letter_id": result.id,
         })
-
     except Exception as e:
-        return jsonify({"error": f"Błąd generowania listu: {str(e)}"}), 500
+        return jsonify({"error": f"Błąd generowania pisma uniwersalnego: {str(e)}"}), 500
 
 
 @app.route('/api/document-categories', methods=['GET'])
@@ -921,7 +976,6 @@ def get_history():
         })
     except Exception as e:
         return jsonify({"error": f"Błąd pobierania historii: {str(e)}"}), 500
-
 
 @app.route('/api/history/<int:letter_id>', methods=['GET'])
 @login_required
@@ -1211,8 +1265,11 @@ def get_employee_by_pesel(pesel):
                 "found": True
             })
         else:
-            return jsonify({"found": False, "message": "Pracownik nie został znaleziony w bazie danych"})
-    
+            return jsonify({
+                "employee": None,
+                "bailiff_conflict": None,
+                "found": False
+            })
     except Exception as e:
         return jsonify({"error": f"Błąd wyszukiwania pracownika: {str(e)}"}), 500
 
@@ -1239,7 +1296,6 @@ def get_bailiff_proceedings(pesel):
             "proceedings": proceedings,
             "conflict_info": conflict_info
         })
-    
     except Exception as e:
         return jsonify({"error": f"Błąd pobierania postępowań: {str(e)}"}), 500
 
