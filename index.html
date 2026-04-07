@@ -5921,11 +5921,13 @@
         }
 
         function populateOCRResults(data, mode, classification, fields, summary) {
+            const sourceMode = mode;
+            let normalizedFields = fields || [];
             window.currentOcrResult = {
                 data: data || null,
                 mode: mode || null,
                 classification: classification || null,
-                fields: fields || []
+                fields: normalizedFields
             };
 
             // Dla nowego pliku przywracamy auto-sugestie dodania nadawcy.
@@ -5942,6 +5944,9 @@
                 data.sprawa   = data.sprawa   || { sygnaturaSprawy: '', numerRachunku: '' };
             } else {
                 mode = 'universal';
+                if (sourceMode === 'komornicze') {
+                    normalizedFields = buildUniversalFieldsFromKomornicData(data);
+                }
             }
     // TRYB KOMORNICZY - stara logika bez zmian
         if (mode === 'komornicze') {
@@ -6012,8 +6017,8 @@
             </div>`;
 
         // Zapisz dane klasyfikacji globalnie (potrzebne przy generowaniu)
-        window.currentClassification = classification;
-        window.currentFields = fields;
+            window.currentClassification = classification;
+            window.currentFields = normalizedFields;
 
         // Zaktualizuj panel AI preview (step 2 lewa kolumna) — tryb universal
         const prevName2   = document.getElementById('aiPreviewBailiffName');
@@ -6024,7 +6029,7 @@
         if (prevCase2) prevCase2.textContent = classification.category || '—';
         if (prevDebtor2) prevDebtor2.parentElement && (prevDebtor2.parentElement.style.display = 'none');
         if (aiLines2) {
-            aiLines2.innerHTML = (fields || []).slice(0, 4).map(f =>
+            aiLines2.innerHTML = (normalizedFields || []).slice(0, 4).map(f =>
                 `<span class="step2-ai-highlight-lbl">${normalizeUniversalFieldLabelForResponse(f.label || '').toUpperCase()}</span>` +
                 `<span class="step2-ai-highlight-val">${f.value || '—'}</span>`
             ).join('');
@@ -6038,7 +6043,7 @@
         const fieldsContainer = document.getElementById('universal-fields-grid');
         fieldsContainer.innerHTML = '';
 
-        (fields || []).forEach(field => {
+        (normalizedFields || []).forEach(field => {
             const displayLabel = normalizeUniversalFieldLabelForResponse(field.label || '');
             const div = document.createElement('div');
             div.className = 'form-group';
@@ -7785,12 +7790,36 @@ function copyFieldValue(inputId) {
             generateBtn.disabled = false;
         }
 
+        function buildUniversalFieldsFromKomornicData(data) {
+            const komornik = (data && data.komornik) || {};
+            const dluznik = (data && data.dluznik) || {};
+            const sprawa = (data && data.sprawa) || {};
+
+            return [
+                { id: 'kom_odbiorca_nazwa', label: 'Odbiorca', type: 'text', value: komornik.imieNazwisko || '', required: true },
+                { id: 'kom_odbiorca_adres', label: 'Adres odbiorcy', type: 'text', value: komornik.adres || '', required: true },
+                { id: 'kom_odbiorca_miasto', label: 'Miasto odbiorcy', type: 'text', value: komornik.miasto || '', required: false },
+                { id: 'kom_dluznik_nazwa', label: 'Dłużnik', type: 'text', value: dluznik.imieNazwisko || '', required: false },
+                { id: 'kom_dluznik_pesel', label: 'PESEL dłużnika', type: 'text', value: dluznik.pesel || '', required: false },
+                { id: 'kom_sprawa_sygnatura', label: 'Nr sprawy', type: 'text', value: sprawa.sygnaturaSprawy || '', required: false },
+                { id: 'kom_sprawa_rachunek', label: 'Nr rachunku', type: 'text', value: sprawa.numerRachunku || '', required: false }
+            ].filter(field => String(field.value || '').trim() !== '');
+        }
+
         function getUniversalRecipientName(fields, classification) {
             const entities = (classification && classification.detected_entities) || {};
-            const fromLabels = getFieldValueByLabel(fields, /nadawca|wystawca|instytucja nadawcy|nazwa nadawcy|od kogo/);
+            const fromLabels = getFieldValueByLabel(fields, /odbiorca|adresat|recipient|addressee|nadawca|wystawca|instytucja nadawcy|nazwa nadawcy|od kogo/);
             if (fromLabels) return fromLabels;
 
-            const fromEntities = String(entities.nadawca || entities.wystawca || '').trim();
+            const fromEntities = String(
+                entities.odbiorca ||
+                entities.adresat ||
+                entities.recipient_name ||
+                entities.addressee_name ||
+                entities.nadawca ||
+                entities.wystawca ||
+                ''
+            ).trim();
             const buyerEntity = String(entities.nabywca || entities.buyer_name || '').trim();
             if (fromEntities && normalizeSenderText(fromEntities) !== normalizeSenderText(buyerEntity)) {
                 return fromEntities;
