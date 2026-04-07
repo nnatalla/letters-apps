@@ -14,7 +14,7 @@ from groq import Groq
 import tempfile
 from datetime import datetime
 from database import DatabaseManager
-from models import init_db, db as orm_db, populate_test_data, Sender, GeneratedLetter, Plan
+from models import init_db, db as orm_db, populate_test_data, Sender, Recipient, GeneratedLetter, Plan
 from auth import auth_bp
 from ocr_utils import resolve_poppler_path, resolve_tesseract_cmd
 
@@ -379,6 +379,76 @@ def _check_letter_limit_and_save(user, title, document_type, subtype, html_conte
     orm_db.session.commit()
     return True, letter
 
+
+def _title_token(value, fallback=''):
+    text = str(value or '').strip()
+    if not text:
+        return fallback
+    return " ".join(text.split())
+
+
+def _extract_first_field_value(fields, keywords):
+    if not isinstance(fields, list):
+        return ''
+    kw = [k.lower() for k in keywords]
+    for field in fields:
+        label = str((field or {}).get('label', '')).lower()
+        value = _title_token((field or {}).get('value', ''))
+        if value and any(k in label for k in kw):
+            return value
+    return ''
+
+
+def _build_komornik_title(option, dane, recipient_name=''):
+    debtor_name = _title_token((dane or {}).get('dluznik', {}).get('imieNazwisko', ''), 'dłużnik')
+    recipient = _title_token(recipient_name)
+
+    if option == 1:
+        core = f"Pismo do komornika - zakończenie współpracy - {debtor_name}"
+    elif option == 2:
+        core = f"Pismo do komornika - błędny charakter pisma - {debtor_name}"
+    elif option == 3:
+        core = f"Pismo do komornika - zajęcie wierzytelności - {debtor_name}"
+    else:
+        core = f"Pismo do komornika - {debtor_name}"
+
+    if recipient:
+        return f"{core} ({recipient})"
+    return core
+
+
+def _build_zbieg_letter_title(dane, recipient_name=''):
+    debtor_name = _title_token((dane or {}).get('dluznik', {}).get('imieNazwisko', ''), 'dłużnik')
+    recipient = _title_token(recipient_name)
+    if recipient:
+        return f"Pismo do komornika - zbieg komorniczy - {debtor_name} ({recipient})"
+    return f"Pismo do komornika - zbieg komorniczy - {debtor_name}"
+
+
+def _build_universal_letter_title(subtype, fields, recipient_name=''):
+    subtype_text = _title_token(subtype, 'sprawa urzędowa')
+    subtype_lower = subtype_text.lower()
+
+    invoice_no = _extract_first_field_value(fields, ['faktury', 'faktura', 'nr faktury', 'numer faktury'])
+    case_no = _extract_first_field_value(fields, ['sygnatura', 'nr sprawy', 'numer sprawy', 'sprawy'])
+    debt_no = _extract_first_field_value(fields, ['wezwanie', 'zadłuż', 'należność'])
+
+    if 'faktur' in subtype_lower:
+        detail = f" nr {invoice_no}" if invoice_no else ''
+        title = f"List o nieopłaconej fakturze{detail}"
+    else:
+        title = f"Pismo w sprawie: {subtype_text}"
+
+    extra = case_no or debt_no
+    if extra:
+        title = f"{title} - {extra}"
+
+    recipient = _title_token(recipient_name)
+    if recipient:
+        title = f"{title} ({recipient})"
+
+    return title
+
 @app.route('/generate-letter', methods=['POST'])
 @login_required
 def generate_letter():
@@ -451,9 +521,10 @@ def generate_letter():
             generated_content = generate_letter_with_template(
                 content_type, sender_data, recipient_data, dane, specific_content
             )
+            letter_title = _build_komornik_title(opcja, dane, _recipient_name)
             ok, result = _check_letter_limit_and_save(
                 current_user,
-                title=f"Odpowiedź na pismo komornicze – {_subtype_label}",
+                title=letter_title,
                 document_type="KOMORNICZE",
                 subtype=_subtype_label,
                 html_content=generated_content,
@@ -462,7 +533,7 @@ def generate_letter():
             )
             if not ok:
                 return result
-            return jsonify({"list": generated_content, "letter_id": result.id})
+            return jsonify({"list": generated_content, "letter_id": result.id, "title": letter_title})
         except Exception as e:
             return jsonify({"error": f"Błąd generowania listu: {e}"}), 500
 
@@ -484,9 +555,10 @@ def generate_letter():
             generated_content = generate_letter_with_template(
                 content_type, sender_data, recipient_data, dane, specific_content
             )
+            letter_title = _build_komornik_title(opcja, dane, _recipient_name)
             ok, result = _check_letter_limit_and_save(
                 current_user,
-                title=f"Odpowiedź na pismo komornicze – {_subtype_label}",
+                title=letter_title,
                 document_type="KOMORNICZE",
                 subtype=_subtype_label,
                 html_content=generated_content,
@@ -495,7 +567,7 @@ def generate_letter():
             )
             if not ok:
                 return result
-            return jsonify({"list": generated_content, "letter_id": result.id})
+            return jsonify({"list": generated_content, "letter_id": result.id, "title": letter_title})
         except Exception as e:
             return jsonify({"error": f"Błąd generowania listu: {e}"}), 500
 
@@ -526,9 +598,10 @@ def generate_letter():
             generated_content = generate_letter_with_template(
                 content_type, sender_data, recipient_data, dane, specific_content
             )
+            letter_title = _build_komornik_title(opcja, dane, _recipient_name)
             ok, result = _check_letter_limit_and_save(
                 current_user,
-                title=f"Odpowiedź na pismo komornicze – {_subtype_label}",
+                title=letter_title,
                 document_type="KOMORNICZE",
                 subtype=_subtype_label,
                 html_content=generated_content,
@@ -537,7 +610,7 @@ def generate_letter():
             )
             if not ok:
                 return result
-            return jsonify({"list": generated_content, "letter_id": result.id})
+            return jsonify({"list": generated_content, "letter_id": result.id, "title": letter_title})
         except Exception as e:
             return jsonify({"error": f"Błąd generowania listu: {e}"}), 500
 
@@ -642,7 +715,7 @@ def generate_zbieg_letters():
                 content_type, sender_data, recipient_data, dane, specific_content
             )
             
-            letter_title = f"List do komornika {recipient_bailiff['imieNazwisko']}"
+            letter_title = _build_zbieg_letter_title(dane, recipient_bailiff['imieNazwisko'])
             
             generated_letters.append({
                 "title": letter_title,
@@ -706,7 +779,7 @@ def generate_zbieg_letters():
             """
             
             generated_letters.append({
-                "title": f"List do komornika {recipient_bailiff['imieNazwisko']}",
+                "title": _build_zbieg_letter_title(dane, recipient_bailiff['imieNazwisko']),
                 "content": basic_content,
                 "bailiff": recipient_bailiff
             })
@@ -926,9 +999,11 @@ def generate_universal_letter():
             sender=sender
         )
 
+        generated_title = _build_universal_letter_title(subtype, fields, recipient_name)
+
         ok, result = _check_letter_limit_and_save(
             current_user,
-            title=f"Odpowiedź na pismo: {subtype}",
+            title=generated_title,
             document_type=category,
             subtype=subtype,
             html_content=letter_html,
@@ -940,7 +1015,7 @@ def generate_universal_letter():
 
         return jsonify({
             "list": letter_html,
-            "title": f"Odpowiedź na pismo: {subtype}",
+            "title": generated_title,
             "letter_id": result.id,
         })
     except Exception as e:
@@ -1622,6 +1697,90 @@ def delete_sender(sender_id):
     except Exception as e:
         orm_db.session.rollback()
         return jsonify({"error": f"Błąd usuwania nadawcy: {str(e)}"}), 500
+
+
+# ── Zarządzanie odbiorcami ───────────────────────────────────────────────────
+
+@app.route('/api/recipients', methods=['GET'])
+@login_required
+def get_recipients():
+    """Lista odbiorców zalogowanego użytkownika"""
+    try:
+        recipients = Recipient.query.filter_by(user_id=current_user.id).order_by(Recipient.nazwa).all()
+        return jsonify([r.to_dict() for r in recipients])
+    except Exception as e:
+        return jsonify({"error": f"Błąd pobierania odbiorców: {str(e)}"}), 500
+
+
+@app.route('/api/recipients', methods=['POST'])
+@login_required
+def add_recipient():
+    """Dodaj nowego odbiorcę"""
+    try:
+        data = request.get_json()
+        if not data or not data.get('nazwa'):
+            return jsonify({"error": "Pole nazwa jest wymagane"}), 400
+        recipient = Recipient(
+            user_id=current_user.id,
+            nazwa=data.get('nazwa'),
+            adres=data.get('adres', ''),
+            miasto=data.get('miasto', ''),
+            kod_pocztowy=data.get('kod_pocztowy', ''),
+            telefon=data.get('telefon', ''),
+            email=data.get('email', ''),
+            kategoria=data.get('kategoria', '')
+        )
+        orm_db.session.add(recipient)
+        orm_db.session.commit()
+        return jsonify(recipient.to_dict()), 201
+    except Exception as e:
+        orm_db.session.rollback()
+        return jsonify({"error": f"Błąd dodawania odbiorcy: {str(e)}"}), 500
+
+
+@app.route('/api/recipients/<int:recipient_id>', methods=['PUT'])
+@login_required
+def update_recipient(recipient_id):
+    """Edytuj odbiorcę (tylko właściciela)"""
+    try:
+        recipient = Recipient.query.get(recipient_id)
+        if not recipient:
+            return jsonify({"error": "Odbiorca nie istnieje"}), 404
+        if recipient.user_id != current_user.id:
+            return jsonify({"error": "Brak uprawnień"}), 403
+        data = request.get_json()
+        if not data or not data.get('nazwa'):
+            return jsonify({"error": "Pole nazwa jest wymagane"}), 400
+        recipient.nazwa = data.get('nazwa')
+        recipient.adres = data.get('adres', recipient.adres)
+        recipient.miasto = data.get('miasto', recipient.miasto)
+        recipient.kod_pocztowy = data.get('kod_pocztowy', recipient.kod_pocztowy)
+        recipient.telefon = data.get('telefon', recipient.telefon)
+        recipient.email = data.get('email', recipient.email)
+        recipient.kategoria = data.get('kategoria', recipient.kategoria)
+        orm_db.session.commit()
+        return jsonify(recipient.to_dict())
+    except Exception as e:
+        orm_db.session.rollback()
+        return jsonify({"error": f"Błąd aktualizacji odbiorcy: {str(e)}"}), 500
+
+
+@app.route('/api/recipients/<int:recipient_id>', methods=['DELETE'])
+@login_required
+def delete_recipient(recipient_id):
+    """Usuń odbiorcę (tylko właściciela)"""
+    try:
+        recipient = Recipient.query.get(recipient_id)
+        if not recipient:
+            return jsonify({"error": "Odbiorca nie istnieje"}), 404
+        if recipient.user_id != current_user.id:
+            return jsonify({"error": "Brak uprawnień"}), 403
+        orm_db.session.delete(recipient)
+        orm_db.session.commit()
+        return jsonify({"message": "Odbiorca usunięty"})
+    except Exception as e:
+        orm_db.session.rollback()
+        return jsonify({"error": f"Błąd usuwania odbiorcy: {str(e)}"}), 500
 
 
 # ─────────────────────────────────────────────────────────────────────────────

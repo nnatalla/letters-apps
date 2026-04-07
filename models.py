@@ -84,6 +84,7 @@ class User(UserMixin, db.Model):
     reset_password_expires = db.Column(db.DateTime, nullable=True)
 
     senders = db.relationship("Sender", back_populates="user", cascade="all, delete-orphan")
+    recipients = db.relationship("Recipient", back_populates="user", cascade="all, delete-orphan")
     generated_letters = db.relationship("GeneratedLetter", back_populates="user", cascade="all, delete-orphan")
 
     def set_password(self, password: str):
@@ -122,6 +123,35 @@ class Sender(db.Model):
     kategoria = db.Column(db.String(100))
 
     user = db.relationship("User", back_populates="senders")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "nazwa": self.nazwa,
+            "adres": self.adres,
+            "miasto": self.miasto,
+            "kod_pocztowy": self.kod_pocztowy,
+            "telefon": self.telefon,
+            "email": self.email,
+            "kategoria": self.kategoria,
+        }
+
+
+class Recipient(db.Model):
+    __tablename__ = "recipients"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    nazwa = db.Column(db.String(255), nullable=False)
+    adres = db.Column(db.String(255))
+    miasto = db.Column(db.String(100))
+    kod_pocztowy = db.Column(db.String(20))
+    telefon = db.Column(db.String(50))
+    email = db.Column(db.String(255))
+    kategoria = db.Column(db.String(100))
+
+    user = db.relationship("User", back_populates="recipients")
 
     def to_dict(self):
         return {

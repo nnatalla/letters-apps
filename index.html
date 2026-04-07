@@ -950,6 +950,9 @@
             align-items: center;
             border-bottom: 1px solid #e1e5e9;
         }
+        .custom-select-option-content { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .custom-select-option-title { font-size: 14px; font-weight: 600; color: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .custom-select-option-meta { font-size: 11px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .custom-select-option:last-child {
             border-bottom: none;
         }
@@ -983,6 +986,9 @@
         }
         html.dark-mode .custom-select-option.selected {
             background-color: #3b5a8a;
+        }
+        html.dark-mode .custom-select-option-meta {
+            color: #9fb0c9;
         }
         html:not(.dark-mode) .custom-select-button {
             background: #ffffff !important;
@@ -4700,6 +4706,10 @@
                 <span class="material-symbols-outlined nav-icon">manage_accounts</span>
                 <span>Nadawcy</span>
             </button>
+            <button class="sidebar-nav-item" onclick="openRecipientsView(); sidebarSetActive('sidebarRecipientsBtn'); document.getElementById('topbarTitle').textContent='Odbiorcy';" id="sidebarRecipientsBtn">
+                <span class="material-symbols-outlined nav-icon">contact_page</span>
+                <span>Odbiorcy</span>
+            </button>
             <button class="sidebar-nav-item" onclick="logoutUser()">
                 <span class="material-symbols-outlined nav-icon">logout</span>
                 <span>Wyloguj</span>
@@ -4944,6 +4954,131 @@
             </div>
         </div>
 
+        <!-- ── Widok: Odbiorcy ── -->
+        <div id="view-recipients" style="display:none;">
+            <div class="main-content senders-view-wrap">
+                <div id="recipientsPageList" class="senders-page active">
+                    <div class="senders-hero">
+                        <div>
+                            <h2>Lista Odbiorców</h2>
+                            <p>Zarządzaj bazą odbiorców odpowiedzi. Wybrany odbiorca może automatycznie uzupełnić pola w kroku 2.</p>
+                        </div>
+                        <button class="senders-add-btn" onclick="openRecipientModal()">
+                            <span class="material-symbols-outlined">person_add</span>
+                            Dodaj Odbiorcę
+                        </button>
+                    </div>
+
+                    <div class="senders-bento-grid">
+                        <div class="senders-bento-card">
+                            <div class="senders-bento-label">Razem Odbiorców</div>
+                            <div class="senders-bento-value" id="recipientsCntAll">0</div>
+                        </div>
+                        <div class="senders-bento-card">
+                            <div class="senders-bento-label">Z Adresem</div>
+                            <div class="senders-bento-value" id="recipientsCntAddress">0</div>
+                        </div>
+                        <div class="senders-bento-card">
+                            <div class="senders-bento-label">Z E-mailem</div>
+                            <div class="senders-bento-value" id="recipientsCntEmail">0</div>
+                        </div>
+                        <div class="senders-bento-card senders-bento-card-accent">
+                            <div class="senders-bento-label">Aktywny wybór</div>
+                            <div class="senders-bento-value" id="recipientsCntSelected">0</div>
+                        </div>
+                    </div>
+
+                    <div class="senders-table-wrap">
+                        <div class="senders-table-head">
+                            <div>Nazwa odbiorcy</div>
+                            <div>Etykieta</div>
+                            <div>Adres</div>
+                            <div>Kontakt</div>
+                            <div class="senders-actions-col">Akcje</div>
+                        </div>
+                        <div id="recipientsRows"></div>
+                    </div>
+                </div>
+
+                <div id="recipientsPageForm" class="senders-page">
+                    <div class="senders-form-card">
+                        <div class="senders-form-header">
+                            <div>
+                                <h3 id="modalRecipientTitle">Dodaj odbiorcę</h3>
+                                <p id="recipientFormSubtitle">Wprowadź dane odbiorcy do bazy systemu.</p>
+                            </div>
+                            <button class="senders-form-close" onclick="closeRecipientModal()">&times;</button>
+                        </div>
+
+                        <div class="senders-form-body">
+                            <div class="senders-form-grid">
+                                <div class="senders-field senders-field-full">
+                                    <label>Pełna nazwa odbiorcy *</label>
+                                    <input id="recipientNazwa" type="text" placeholder="np. Komornik Sądowy Piotr Lisiecki">
+                                </div>
+                                <div class="senders-field senders-field-full">
+                                    <label>Kategoria odbiorcy</label>
+                                    <select id="recipientKategoria" class="senders-select">
+                                        <option value="">Wybierz kategorię...</option>
+                                        <option value="osoba_prywatna">Osoba prywatna</option>
+                                        <option value="firma_prywatna">Firma prywatna</option>
+                                        <option value="jednoosobowa_dzialalnosc">Jednoosobowa działalność</option>
+                                        <option value="kancelaria_prawna">Kancelaria prawna</option>
+                                        <option value="kancelaria_komornicza">Kancelaria komornicza</option>
+                                        <option value="komornik">Komornik</option>
+                                        <option value="sad">Sąd</option>
+                                        <option value="prokuratura">Prokuratura</option>
+                                        <option value="policja">Policja</option>
+                                        <option value="urzad_skarbowy">Urząd skarbowy</option>
+                                        <option value="urzad_miasta_gminy">Urząd miasta / gminy</option>
+                                        <option value="zus">ZUS</option>
+                                        <option value="krus">KRUS</option>
+                                        <option value="nfz">NFZ</option>
+                                        <option value="szkola">Szkoła</option>
+                                        <option value="uczelnia">Uczelnia</option>
+                                        <option value="bank">Bank</option>
+                                        <option value="ubezpieczyciel">Ubezpieczyciel</option>
+                                        <option value="windykacja">Windykacja</option>
+                                        <option value="spoldzielnia_wspolnota">Spółdzielnia / wspólnota</option>
+                                        <option value="notariusz">Notariusz</option>
+                                        <option value="inny">Inny</option>
+                                    </select>
+                                </div>
+                                <div class="senders-field senders-field-full">
+                                    <label>Ulica i numer</label>
+                                    <input id="recipientAdres" type="text" placeholder="ul. Piotrkowska 12/4">
+                                </div>
+                                <div class="senders-field">
+                                    <label>Kod pocztowy</label>
+                                    <input id="recipientKod" type="text" placeholder="00-001">
+                                </div>
+                                <div class="senders-field">
+                                    <label>Miasto</label>
+                                    <input id="recipientMiasto" type="text" placeholder="Łódź">
+                                </div>
+                                <div class="senders-field">
+                                    <label>Telefon</label>
+                                    <input id="recipientTelefon" type="text" placeholder="+48 000 000 000">
+                                </div>
+                                <div class="senders-field">
+                                    <label>E-mail</label>
+                                    <input id="recipientEmail" type="email" placeholder="kontakt@instytucja.pl">
+                                </div>
+                            </div>
+
+                            <div class="senders-form-actions">
+                                <button class="btn-modal-cancel" onclick="closeRecipientModal()">Anuluj</button>
+                                <button class="btn-modal-save" onclick="saveRecipient()">
+                                    <span class="material-symbols-outlined" style="font-size:16px;">save</span>
+                                    <span id="recipientSaveBtnText">Zapisz</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- ── Widok: Główny flow (kroki 1-4) ── -->
         <div id="view-main">
         <div class="main-content">
@@ -5030,6 +5165,18 @@
                         <div class="custom-select-dropdown" id="senderSelectDropdown"></div>
                     </div>
                     <button class="btn-add-sender-inline" onclick="openSenderModal()" title="Dodaj nadawcę odpowiedzi">+</button>
+                </div>
+
+                <div class="sender-select-bar" style="margin-bottom:20px;">
+                    <label>Odbiorca odpowiedzi (auto-uzupełnianie pól):</label>
+                    <div class="custom-select-wrapper">
+                        <div class="custom-select-button" id="recipientSelectButton" onclick="toggleRecipientDropdown()">
+                            <span id="recipientSelectText">-- Wpisz ręcznie lub wybierz odbiorcę z listy --</span>
+                            <span class="custom-select-arrow">▼</span>
+                        </div>
+                        <div class="custom-select-dropdown" id="recipientSelectDropdown"></div>
+                    </div>
+                    <button class="btn-add-sender-inline" onclick="openRecipientModal()" title="Dodaj odbiorcę">+</button>
                 </div>
 
                 <!-- ── Two-column grid ── -->
@@ -5610,6 +5757,7 @@
                     populateOCRResults(r.dane, r.mode, r.classification, r.fields, r.summary);
                     goToStep(2);
                     await loadSenders();
+                    await loadRecipients();
                     await autoResolveSenderFromAI();
                     showToast('Pismo przetworzone pomyślnie!', 'success');
                 } else {
@@ -5664,6 +5812,7 @@
 
             goToStep(2);
             await loadSenders();
+            await loadRecipients();
             showToast('Przejście do kroku 2 w trybie ręcznym.', 'info');
         }
 
@@ -5688,6 +5837,7 @@
                         );
                         goToStep(2);
                         await loadSenders();
+                        await loadRecipients();
                         await autoResolveSenderFromAI();
                         showToast('Pismo przetworzone pomyślnie!', 'success');
 
@@ -7525,7 +7675,7 @@ function copyFieldValue(inputId) {
 
                     if (response.ok) {
                         allGeneratedLetters = [{
-                            title: 'Wygenerowany List',
+                            title: result.title || 'Wygenerowany list',
                             content: result.list,
                             letter_id: result.letter_id || null,
                             bailiff: payload.dane.komornik
@@ -8077,6 +8227,8 @@ function copyFieldValue(inputId) {
 
             currentSender = null;
             selectSenderOption(null);
+            currentRecipient = null;
+            selectRecipientOption(null);
             document.getElementById('fileName').textContent = '';
             document.getElementById('fileInput').value = '';
             document.getElementById('additionalBailiffs').innerHTML = '';
@@ -8133,6 +8285,7 @@ function copyFieldValue(inputId) {
             initializeDatabase();
             loadBailiffsFromDatabase();
             loadSenders();
+            loadRecipients();
             loadAccountInfo();
             mountStep2VerificationInsidePreview();
         });
@@ -8420,15 +8573,33 @@ function copyFieldValue(inputId) {
 
         let currentSenderId = null;
         let _sendersCache = [];
+        let currentRecipientId = null;
+        let currentRecipient = null;
+        let _recipientsCache = [];
+
+        function compactAddressLine(entry) {
+            const street = String((entry && entry.adres) || '').trim();
+            const postal = String((entry && entry.kod_pocztowy) || '').trim();
+            const city = String((entry && entry.miasto) || '').trim();
+            const postalCity = [postal, city].filter(Boolean).join(' ').trim();
+            return [street, postalCity].filter(Boolean).join(', ').trim();
+        }
 
         function renderSenderSelect(senders) {
             const dropdown = document.getElementById('senderSelectDropdown');
+            if (!dropdown) return;
             dropdown.innerHTML = '';
             
             senders.forEach(s => {
                 const opt = document.createElement('div');
                 opt.className = 'custom-select-option' + (s.id === currentSenderId ? ' selected' : '');
-                opt.textContent = s.nazwa + (s.miasto ? ` (${s.miasto})` : '');
+                const addressLine = compactAddressLine(s) || 'brak adresu';
+                opt.innerHTML = `
+                    <div class="custom-select-option-content">
+                        <span class="custom-select-option-title">${escapeHtml(s.nazwa || 'Bez nazwy')}</span>
+                        <span class="custom-select-option-meta">${escapeHtml(addressLine)}</span>
+                    </div>
+                `;
                 opt.dataset.value = s.id;
                 opt.onclick = (e) => {
                     e.stopPropagation();
@@ -8456,20 +8627,128 @@ function copyFieldValue(inputId) {
             currentSenderId = senderId;
             closeSenderDropdown();
             
-            const button = document.getElementById('senderSelectButton');
             if (senderId) {
-                fetch('/api/senders').then(r => r.json()).then(senders => {
-                    const sender = senders.find(s => s.id === senderId);
-                    if (sender) {
-                        const displayText = sender.nazwa + (sender.miasto ? ` (${sender.miasto})` : '');
-                        document.getElementById('senderSelectText').textContent = displayText;
-                        currentSender = sender;
-                        renderSenderSelect(senders);
-                    }
-                });
+                const sender = (_sendersCache || []).find(s => s.id === senderId) || null;
+                if (sender) {
+                    const displayText = sender.nazwa + (sender.miasto ? ` (${sender.miasto})` : '');
+                    document.getElementById('senderSelectText').textContent = displayText;
+                    currentSender = sender;
+                    renderSenderSelect(_sendersCache);
+                }
             } else {
                 document.getElementById('senderSelectText').textContent = '-- Wybierz nadawcę odpowiedzi --';
                 currentSender = null;
+            }
+        }
+
+        async function loadRecipients() {
+            try {
+                const resp = await fetch('/api/recipients');
+                if (!resp.ok) return [];
+                const recipients = await resp.json();
+                _recipientsCache = recipients;
+                renderRecipientSelect(recipients);
+                renderRecipientsList(recipients);
+                return recipients;
+            } catch (e) {
+                console.error('Błąd ładowania odbiorców:', e);
+                return [];
+            }
+        }
+
+        function renderRecipientSelect(recipients) {
+            const dropdown = document.getElementById('recipientSelectDropdown');
+            if (!dropdown) return;
+            dropdown.innerHTML = '';
+
+            recipients.forEach(r => {
+                const opt = document.createElement('div');
+                opt.className = 'custom-select-option' + (r.id === currentRecipientId ? ' selected' : '');
+                const addressLine = compactAddressLine(r) || 'brak adresu';
+                opt.innerHTML = `
+                    <div class="custom-select-option-content">
+                        <span class="custom-select-option-title">${escapeHtml(r.nazwa || 'Bez nazwy')}</span>
+                        <span class="custom-select-option-meta">${escapeHtml(addressLine)}</span>
+                    </div>
+                `;
+                opt.dataset.value = r.id;
+                opt.onclick = (e) => {
+                    e.stopPropagation();
+                    selectRecipientOption(r.id);
+                };
+                dropdown.appendChild(opt);
+            });
+        }
+
+        function toggleRecipientDropdown() {
+            const button = document.getElementById('recipientSelectButton');
+            const dropdown = document.getElementById('recipientSelectDropdown');
+            if (!button || !dropdown) return;
+            button.classList.toggle('open');
+            dropdown.classList.toggle('show');
+        }
+
+        function closeRecipientDropdown() {
+            const button = document.getElementById('recipientSelectButton');
+            const dropdown = document.getElementById('recipientSelectDropdown');
+            if (button) button.classList.remove('open');
+            if (dropdown) dropdown.classList.remove('show');
+        }
+
+        function applyRecipientToStep2Fields(recipient) {
+            if (!recipient) return;
+            const nameEl = document.getElementById('editBailiffName');
+            const addressEl = document.getElementById('editBailiffAddress');
+            const cityEl = document.getElementById('editBailiffCity');
+            const contactEl = document.getElementById('editBailiffContact');
+
+            if (nameEl) nameEl.value = recipient.nazwa || '';
+            if (addressEl) addressEl.value = recipient.adres || '';
+            if (cityEl) cityEl.value = [recipient.kod_pocztowy || '', recipient.miasto || ''].filter(Boolean).join(' ').trim();
+            if (contactEl) contactEl.value = [recipient.telefon || '', recipient.email || ''].filter(Boolean).join(' ').trim();
+
+            const previewName = document.getElementById('aiPreviewBailiffName');
+            if (previewName && recipient.nazwa) previewName.textContent = recipient.nazwa;
+
+            // Tryb universal: wypełnij dynamiczne pola po etykietach.
+            const recCityLine = [recipient.kod_pocztowy || '', recipient.miasto || ''].filter(Boolean).join(' ').trim();
+            const recContactLine = [recipient.telefon || '', recipient.email || ''].filter(Boolean).join(' ').trim();
+            const labelMap = [
+                { regex: /nadawc|wystawc|adresat|odbiorc|instytucja.*nadaw|instytucja.*odbior|do kogo|od kogo/, value: recipient.nazwa || '' },
+                { regex: /adres/, value: recipient.adres || '' },
+                { regex: /kod pocztowy/, value: recipient.kod_pocztowy || '' },
+                { regex: /miasto|miejscow/, value: recipient.miasto || '' },
+                { regex: /kod.*miasto|miasto.*kod/, value: recCityLine },
+                { regex: /kontakt|telefon|email|e-mail/, value: recContactLine }
+            ];
+
+            (window.currentFields || []).forEach(field => {
+                const input = document.getElementById(`ufield_${field.id}`);
+                if (!input) return;
+                const label = String(field.label || '').toLowerCase();
+                const match = labelMap.find(m => m.value && m.regex.test(label));
+                if (match) input.value = match.value;
+            });
+        }
+
+        function selectRecipientOption(recipientId) {
+            currentRecipientId = recipientId;
+            closeRecipientDropdown();
+
+            if (recipientId) {
+                const recipient = (_recipientsCache || []).find(r => r.id === recipientId) || null;
+                if (recipient) {
+                    const displayText = recipient.nazwa + (recipient.miasto ? ` (${recipient.miasto})` : '');
+                    document.getElementById('recipientSelectText').textContent = displayText;
+                    currentRecipient = recipient;
+                    renderRecipientSelect(_recipientsCache);
+                    renderRecipientsList(_recipientsCache);
+                    applyRecipientToStep2Fields(recipient);
+                }
+            } else {
+                document.getElementById('recipientSelectText').textContent = '-- Wpisz ręcznie lub wybierz odbiorcę z listy --';
+                currentRecipient = null;
+                renderRecipientsList(_recipientsCache);
             }
         }
 
@@ -8946,6 +9225,7 @@ function copyFieldValue(inputId) {
         document.addEventListener('click', function(e) {
             if (!e.target.closest('.custom-select-wrapper')) {
                 closeSenderDropdown();
+                closeRecipientDropdown();
             }
         });
 
@@ -9042,6 +9322,7 @@ function copyFieldValue(inputId) {
             const viewMain = document.getElementById('view-main');
             const viewHistory = document.getElementById('view-history');
             const viewSenders = document.getElementById('view-senders');
+            const viewRecipients = document.getElementById('view-recipients');
             const title = document.getElementById('topbarTitle');
             const topSearch = document.querySelector('.topbar-search-input');
             if (viewMain) viewMain.style.display = 'none';
@@ -9049,6 +9330,7 @@ function copyFieldValue(inputId) {
                 viewHistory.style.display = 'none';
                 viewHistory.classList.remove('active');
             }
+            if (viewRecipients) viewRecipients.style.display = 'none';
             if (viewSenders) viewSenders.style.display = 'block';
             if (title) title.textContent = 'Nadawcy';
             if (topSearch) topSearch.placeholder = 'Szukaj nadawcy…';
@@ -9058,9 +9340,11 @@ function copyFieldValue(inputId) {
 
         function closeSendersView() {
             const viewSenders = document.getElementById('view-senders');
+            const viewRecipients = document.getElementById('view-recipients');
             const viewMain = document.getElementById('view-main');
             const topSearch = document.querySelector('.topbar-search-input');
             if (viewSenders) viewSenders.style.display = 'none';
+            if (viewRecipients) viewRecipients.style.display = 'none';
             if (viewMain) viewMain.style.display = 'block';
             if (topSearch) topSearch.placeholder = 'Szukaj w historii…';
         }
@@ -9077,6 +9361,117 @@ function copyFieldValue(inputId) {
             const formPage = document.getElementById('sendersPageForm');
             if (listPage) listPage.classList.remove('active');
             if (formPage) formPage.classList.add('active');
+        }
+
+        function openRecipientsView() {
+            const viewMain = document.getElementById('view-main');
+            const viewHistory = document.getElementById('view-history');
+            const viewSenders = document.getElementById('view-senders');
+            const viewRecipients = document.getElementById('view-recipients');
+            const title = document.getElementById('topbarTitle');
+            const topSearch = document.querySelector('.topbar-search-input');
+
+            if (viewMain) viewMain.style.display = 'none';
+            if (viewHistory) {
+                viewHistory.style.display = 'none';
+                viewHistory.classList.remove('active');
+            }
+            if (viewSenders) viewSenders.style.display = 'none';
+            if (viewRecipients) viewRecipients.style.display = 'block';
+
+            if (title) title.textContent = 'Odbiorcy';
+            if (topSearch) topSearch.placeholder = 'Szukaj odbiorcy…';
+
+            showRecipientsListPage();
+            loadRecipients();
+        }
+
+        function showRecipientsListPage() {
+            const listPage = document.getElementById('recipientsPageList');
+            const formPage = document.getElementById('recipientsPageForm');
+            if (listPage) listPage.classList.add('active');
+            if (formPage) formPage.classList.remove('active');
+        }
+
+        function showRecipientsFormPage() {
+            const listPage = document.getElementById('recipientsPageList');
+            const formPage = document.getElementById('recipientsPageForm');
+            if (listPage) listPage.classList.remove('active');
+            if (formPage) formPage.classList.add('active');
+        }
+
+        function getFilteredRecipients(searchQuery = '') {
+            const q = (searchQuery || '').toLowerCase().trim();
+            const source = _recipientsCache || [];
+            if (!q) return source;
+            return source.filter(r => {
+                const haystack = [
+                    r.nazwa,
+                    r.adres,
+                    r.miasto,
+                    r.kod_pocztowy,
+                    r.telefon,
+                    r.email,
+                    senderCategoryLabel(r.kategoria)
+                ].filter(Boolean).join(' ').toLowerCase();
+                return haystack.includes(q);
+            });
+        }
+
+        function renderRecipientsList(recipients) {
+            const rows = document.getElementById('recipientsRows');
+            if (!rows) return;
+
+            const topSearch = document.querySelector('.topbar-search-input');
+            const q = ((topSearch && topSearch.value) || '').toLowerCase().trim();
+            let displayRecipients = recipients;
+            if (q) {
+                displayRecipients = recipients.filter(r => {
+                    const hay = [r.nazwa, r.adres, r.miasto, r.kod_pocztowy, r.telefon, r.email]
+                        .filter(Boolean)
+                        .join(' ')
+                        .toLowerCase();
+                    return hay.includes(q);
+                });
+            }
+
+            const cntAll = document.getElementById('recipientsCntAll');
+            const cntAddress = document.getElementById('recipientsCntAddress');
+            const cntEmail = document.getElementById('recipientsCntEmail');
+            const cntSelected = document.getElementById('recipientsCntSelected');
+            if (cntAll) cntAll.textContent = String(displayRecipients.length);
+            if (cntAddress) cntAddress.textContent = String(displayRecipients.filter(r => (r.adres || '').trim().length > 0).length);
+            if (cntEmail) cntEmail.textContent = String(displayRecipients.filter(r => (r.email || '').trim().length > 0).length);
+            if (cntSelected) cntSelected.textContent = currentRecipient ? '1' : '0';
+
+            if (displayRecipients.length === 0) {
+                rows.innerHTML = '<div class="senders-empty">Brak odbiorców. Dodaj pierwszego odbiorcę.</div>';
+                return;
+            }
+
+            rows.innerHTML = displayRecipients.map(r => {
+                const address = [r.adres || '', r.kod_pocztowy || '', r.miasto || ''].filter(Boolean).join(', ');
+                const contact = [r.telefon || '', r.email || ''].filter(Boolean).join(' · ');
+                return `
+                    <div class="senders-row">
+                        <div>
+                            <div class="senders-name">${escapeHtml(r.nazwa || 'Bez nazwy')}</div>
+                            <div class="senders-meta">ID: ${r.id}</div>
+                        </div>
+                        <div>${r.kategoria ? `<span class="sender-category-badge ${senderCategoryBadgeClass(r.kategoria)}">${escapeHtml(senderCategoryLabel(r.kategoria))}</span>` : '<span class="senders-contact">-</span>'}</div>
+                        <div class="senders-contact">${escapeHtml(address || '-')}</div>
+                        <div class="senders-contact">${escapeHtml(contact || '-')}</div>
+                        <div class="senders-row-actions">
+                            <button class="senders-icon-btn" onclick="editRecipient(${r.id})" title="Edytuj">
+                                <span class="material-symbols-outlined" style="font-size:18px;">edit_note</span>
+                            </button>
+                            <button class="senders-icon-btn del" onclick="deleteRecipient(${r.id})" title="Usuń">
+                                <span class="material-symbols-outlined" style="font-size:18px;">delete</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         // ── Kompatybilność (stary panel użytkownika) ───────────────────
@@ -9525,6 +9920,107 @@ function copyFieldValue(inputId) {
             }
         }
 
+        // ── Modal odbiorcy ────────────────────────────────────────────
+
+        let editingRecipientId = null;
+
+        function openRecipientModal(id) {
+            editingRecipientId = id || null;
+            const titleEl = document.getElementById('modalRecipientTitle');
+            const subtitleEl = document.getElementById('recipientFormSubtitle');
+            const saveTextEl = document.getElementById('recipientSaveBtnText');
+            if (titleEl) titleEl.textContent = id ? 'Edytuj odbiorcę' : 'Dodaj nowego odbiorcę';
+            if (subtitleEl) subtitleEl.textContent = id ? 'Zaktualizuj dane odbiorcy w bazie systemu.' : 'Wprowadź dane odbiorcy do bazy systemu.';
+            if (saveTextEl) saveTextEl.textContent = id ? 'Zapisz zmiany' : 'Dodaj odbiorcę';
+
+            document.getElementById('recipientNazwa').value = '';
+            document.getElementById('recipientAdres').value = '';
+            document.getElementById('recipientMiasto').value = '';
+            document.getElementById('recipientKod').value = '';
+            document.getElementById('recipientTelefon').value = '';
+            document.getElementById('recipientEmail').value = '';
+            document.getElementById('recipientKategoria').value = '';
+
+            openRecipientsView();
+            showRecipientsFormPage();
+
+            if (id) {
+                const r = (_recipientsCache || []).find(x => x.id === id);
+                if (r) {
+                    document.getElementById('recipientNazwa').value = r.nazwa || '';
+                    document.getElementById('recipientAdres').value = r.adres || '';
+                    document.getElementById('recipientMiasto').value = r.miasto || '';
+                    document.getElementById('recipientKod').value = r.kod_pocztowy || '';
+                    document.getElementById('recipientTelefon').value = r.telefon || '';
+                    document.getElementById('recipientEmail').value = r.email || '';
+                    document.getElementById('recipientKategoria').value = r.kategoria || '';
+                }
+            }
+        }
+
+        function closeRecipientModal() {
+            editingRecipientId = null;
+            showRecipientsListPage();
+        }
+
+        async function saveRecipient() {
+            const nazwa = document.getElementById('recipientNazwa').value.trim();
+            if (!nazwa) { alert('Pole Nazwa jest wymagane!'); return; }
+
+            const body = {
+                nazwa,
+                adres: document.getElementById('recipientAdres').value.trim(),
+                miasto: document.getElementById('recipientMiasto').value.trim(),
+                kod_pocztowy: document.getElementById('recipientKod').value.trim(),
+                telefon: document.getElementById('recipientTelefon').value.trim(),
+                email: document.getElementById('recipientEmail').value.trim(),
+                kategoria: document.getElementById('recipientKategoria').value
+            };
+
+            const url = editingRecipientId ? `/api/recipients/${editingRecipientId}` : '/api/recipients';
+            const method = editingRecipientId ? 'PUT' : 'POST';
+
+            try {
+                const resp = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const result = await resp.json();
+                if (resp.ok) {
+                    closeRecipientModal();
+                    await loadRecipients();
+                } else {
+                    alert('Błąd: ' + (result.error || 'Nieznany błąd'));
+                }
+            } catch (e) {
+                alert('Nie udało się połączyć z serwerem.');
+            }
+        }
+
+        async function editRecipient(id) {
+            openRecipientModal(id);
+        }
+
+        async function deleteRecipient(id) {
+            if (!confirm('Usunąć tego odbiorcę?')) return;
+            try {
+                const resp = await fetch(`/api/recipients/${id}`, { method: 'DELETE' });
+                if (resp.ok) {
+                    if (currentRecipient && currentRecipient.id === id) {
+                        currentRecipient = null;
+                        selectRecipientOption(null);
+                    }
+                    await loadRecipients();
+                } else {
+                    const r = await resp.json();
+                    alert('Błąd: ' + (r.error || 'Nieznany błąd'));
+                }
+            } catch (e) {
+                alert('Nie udało się połączyć z serwerem.');
+            }
+        }
+
         // ── Historia pism ──────────────────────────────────────────────
 
         var currentPreviewId = null;  // var żeby było dostępne jako window.currentPreviewId w onclick atrybutach
@@ -9554,6 +10050,8 @@ function copyFieldValue(inputId) {
             document.getElementById('view-main').style.display = 'none';
             const vs = document.getElementById('view-senders');
             if (vs) vs.style.display = 'none';
+            const vr = document.getElementById('view-recipients');
+            if (vr) vr.style.display = 'none';
             const vh = document.getElementById('view-history');
             vh.style.display = 'block';
             vh.classList.add('active');
@@ -9581,6 +10079,8 @@ function copyFieldValue(inputId) {
             document.getElementById('view-history').classList.remove('active');
             const vs = document.getElementById('view-senders');
             if (vs) vs.style.display = 'none';
+            const vr = document.getElementById('view-recipients');
+            if (vr) vr.style.display = 'none';
             document.getElementById('view-main').style.display = 'block';
             const topSearch = document.querySelector('.topbar-search-input');
             if (topSearch) topSearch.placeholder = 'Szukaj w historii…';
@@ -9760,6 +10260,11 @@ function copyFieldValue(inputId) {
             const sendersView = document.getElementById('view-senders');
             if (sendersView && sendersView.style.display !== 'none') {
                 renderSendersList(getFilteredSenders(query));
+                return;
+            }
+            const recipientsView = document.getElementById('view-recipients');
+            if (recipientsView && recipientsView.style.display !== 'none') {
+                renderRecipientsList(getFilteredRecipients(query));
                 return;
             }
             renderHistoryList(getFilteredHistory(query));
