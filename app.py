@@ -400,7 +400,7 @@ def generate_letter():
 
     sender_city_line = " ".join(part for part in [sender_postal, sender_city] if part).strip()
     sender_address = ", ".join(part for part in [sender_street, sender_city_line] if part) or 'ul. Przykładowa 1, 90-001 Łódź'
-    sender_contact = " / ".join(part for part in [sender_phone, sender_email] if part) or 'tel: 123456789 / email: biuro@avalon.pl'
+    sender_contact = " / ".join(part for part in [sender_phone, sender_email] if part)
     
     # Przygotowanie danych dla szablonu
     sender_data = {
@@ -426,10 +426,21 @@ def generate_letter():
     if opcja == 1:
         content_type = "INFORMACJA O ZAKOŃCZENIU WSPÓŁPRACY Z FIRMĄ"
         bailiff_greeting = get_bailiff_greeting(dane['komornik'].get('plec', 'M'))
+        end_date = (
+            dane.get('dataZakonczenia')
+            or dane.get('dataZakonczania')
+            or dane.get('data_zakonczenia')
+            or dane.get('data_zakonczania')
+            or dane.get('dataZakonczeniaWspolpracy')
+            or dane.get('dataZakonczeniaWspółpracy')
+            or ''
+        )
+        end_date_text = str(end_date).strip() or 'nie podano'
+
         specific_content = f"""
         <p>{bailiff_greeting},</p>
         <p>Informuję, iż <strong>{dane['dluznik']['imieNazwisko']}</strong> PESEL: <strong>{dane['dluznik']['pesel']}</strong>,
-        zakończyła współpracę z naszą firmą w dniu <strong>{dane.get('dataZakonczenia', 'nie podano')}</strong>.</p>
+        zakończyła współpracę z naszą firmą w dniu <strong>{end_date_text}</strong>.</p>
         <p>W związku z powyższym, osoba ta nie jest już naszym pracownikiem/współpracownikiem.</p>
         """
 
@@ -553,7 +564,7 @@ def generate_zbieg_letters():
 
     sender_city_line = " ".join(part for part in [sender_postal, sender_city] if part).strip()
     sender_address = ", ".join(part for part in [sender_street, sender_city_line] if part) or 'ul. Przykładowa 1, 90-001 Łódź'
-    sender_contact = " / ".join(part for part in [sender_phone, sender_email] if part) or 'tel: 123456789 / email: biuro@avalon.pl'
+    sender_contact = " / ".join(part for part in [sender_phone, sender_email] if part)
     
     if len(all_bailiffs) < 2:
         return jsonify({"error": "Zbieg komorniczy wymaga co najmniej 2 komorników"}), 400
@@ -672,7 +683,7 @@ def generate_zbieg_letters():
 
                 <div class="recipient">
                     Komornik Sądowy przy<br>
-                    <strong>Sąd Rejonowy w Łodzi</strong><br>
+                    <strong>Sądzie Rejonowym w Łodzi</strong><br>
                     {recipient_bailiff['imieNazwisko']}<br>
                     {recipient_bailiff['adres']}<br>
                     {recipient_bailiff['miasto']}
@@ -810,7 +821,7 @@ def generate_letter_with_template(content_type, sender_data, recipient_data, cas
             </div>
             <div class="recipient">
                 Komornik Sądowy przy<br>
-                <strong>Sąd Rejonowy w Łodzi</strong><br>
+                <strong>Sądzie Rejonowym w Łodzi</strong><br>
                 {recipient_data.get('name', 'Nieznany')}<br>
                 {recipient_data.get('address', '')}
             </div>

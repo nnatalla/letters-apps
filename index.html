@@ -800,6 +800,73 @@
             cursor: pointer;
         }
 
+        /* ── Modale komornika (wybór/dodawanie) ── */
+        .bailiff-selector-modal > div,
+        .add-bailiff-modal > div {
+            background: #ffffff !important;
+            color: #111827 !important;
+            border: 1px solid #dbe2ea;
+        }
+        .bailiff-selector-modal h3,
+        .add-bailiff-modal h3 {
+            color: #1e3c72 !important;
+        }
+        .bailiff-selector-modal p,
+        .add-bailiff-modal p,
+        .add-bailiff-modal label,
+        .add-bailiff-modal small,
+        .bailiff-selector-modal small {
+            color: #374151 !important;
+        }
+        .add-bailiff-modal input,
+        .add-bailiff-modal select {
+            background: #ffffff !important;
+            color: #111827 !important;
+            border-color: #cbd5e0 !important;
+        }
+        .bailiff-selector-modal .bailiff-option {
+            background: #ffffff !important;
+            border-color: #cbd5e0 !important;
+        }
+        .bailiff-selector-modal .bailiff-option:hover {
+            border-color: #2a5298 !important;
+            background: #e6f2ff !important;
+        }
+
+        html.dark-mode .bailiff-selector-modal > div,
+        html.dark-mode .add-bailiff-modal > div {
+            background: #16213e !important;
+            color: #e0e7f1 !important;
+            border: 1px solid #2a3a5a;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45) !important;
+        }
+        html.dark-mode .bailiff-selector-modal h3,
+        html.dark-mode .add-bailiff-modal h3 {
+            color: #b8c4ff !important;
+        }
+        html.dark-mode .bailiff-selector-modal p,
+        html.dark-mode .add-bailiff-modal p,
+        html.dark-mode .add-bailiff-modal label,
+        html.dark-mode .add-bailiff-modal small,
+        html.dark-mode .bailiff-selector-modal small {
+            color: #c9d5e8 !important;
+        }
+        html.dark-mode .add-bailiff-modal input,
+        html.dark-mode .add-bailiff-modal select {
+            background: #0f1a2f !important;
+            color: #e0e7f1 !important;
+            border-color: #314664 !important;
+        }
+        html.dark-mode .bailiff-selector-modal .bailiff-option {
+            background: #0f1a2f !important;
+            border-color: #314664 !important;
+            color: #e0e7f1 !important;
+        }
+        html.dark-mode .bailiff-selector-modal .bailiff-option:hover {
+            border-color: #6ba3f5 !important;
+            background: #1c2c4a !important;
+        }
+
         /* ── Dropdown nadawcy w kroku 2 ── */
         .sender-select-bar {
             display: flex;
@@ -6123,8 +6190,7 @@ function copyFieldValue(inputId) {
                             display: flex;
                             justify-content: space-between;
                             align-items: center;
-                        " onmouseover="this.style.borderColor='#2a5298'; this.style.background='#e6f2ff';" 
-                           onmouseout="this.style.borderColor='#cbd5e0'; this.style.background='white';">
+                        ">
                             <div onclick="selectBailiff(${index}, ${bailiffIndex})" style="flex: 1; cursor: pointer;">
                                 <strong>${bailiff.imieNazwisko}</strong><br>
                                 <small style="color: #666;">${bailiff.adres}, ${bailiff.kodPocztowy} ${bailiff.miasto}</small>
@@ -6726,8 +6792,7 @@ function copyFieldValue(inputId) {
                                     display: flex;
                                     justify-content: space-between;
                                     align-items: center;
-                                " onmouseover="this.style.borderColor='#2a5298'; this.style.background='#e6f2ff';" 
-                                   onmouseout="this.style.borderColor='#cbd5e0'; this.style.background='white';">
+                                ">
                                     <div onclick="selectBailiff(${index}, ${currentBailiffIndex})" style="flex: 1; cursor: pointer;">
                                         <strong>${bailiff.imieNazwisko}</strong><br>
                                         <small style="color: #666;">${bailiff.adres}, ${bailiff.kodPocztowy} ${bailiff.miasto}</small>
@@ -7202,8 +7267,7 @@ function copyFieldValue(inputId) {
                                     display: flex;
                                     justify-content: space-between;
                                     align-items: center;
-                                " onmouseover="this.style.borderColor='#2a5298'; this.style.background='#e6f2ff';" 
-                                   onmouseout="this.style.borderColor='#cbd5e0'; this.style.background='white';">
+                                ">
                                     <div onclick="selectBailiff(${index}, ${currentBailiffIndex})" style="flex: 1; cursor: pointer;">
                                         <strong>${bailiff.imieNazwisko}</strong><br>
                                         <small style="color: #666;">${bailiff.adres}, ${bailiff.kodPocztowy} ${bailiff.miasto}</small>
@@ -7340,7 +7404,7 @@ function copyFieldValue(inputId) {
                         sygnaturaSprawy: document.getElementById('editCaseNumber').value,
                         numerRachunku: document.getElementById('editBankAccount').value
                     },
-                    dataZakonczania: (selectedOption === 1 && document.getElementById('endDate')) ? document.getElementById('endDate').value : null,
+                    dataZakonczenia: (selectedOption === 1 && document.getElementById('endDate')) ? document.getElementById('endDate').value : null,
                     umowy: {
                         zlecenie: (selectedOption === 3 && document.getElementById('contractType1')) ? document.getElementById('contractType1').checked : false,
                         najem: (selectedOption === 3 && document.getElementById('contractType2')) ? document.getElementById('contractType2').checked : false
@@ -8032,12 +8096,36 @@ function copyFieldValue(inputId) {
 
             goToStep(1);
         }
+        function tryOpenNativeDatePicker(input) {
+            if (!input || input.type !== 'date') return;
+            if (typeof input.showPicker === 'function') {
+                try {
+                    input.showPicker();
+                } catch (e) {
+                    // Niektóre przeglądarki blokują showPicker bez pełnej interakcji użytkownika.
+                }
+            }
+        }
 
         document.addEventListener('DOMContentLoaded', function () {
             const today = new Date().toISOString().split('T')[0];
             document.querySelectorAll('input[type="date"]').forEach(input => {
                 if (!input.value) {
                     input.value = today;
+                }
+            });
+            // Wymuś otwieranie kalendarza po kliknięciu/focusie pola daty (w tym Data zakończenia współpracy).
+            document.addEventListener('click', function (event) {
+                const input = event.target.closest('input[type="date"]');
+                if (input) {
+                    tryOpenNativeDatePicker(input);
+                }
+            });
+
+            document.addEventListener('focusin', function (event) {
+                const input = event.target.closest('input[type="date"]');
+                if (input) {
+                    tryOpenNativeDatePicker(input);
                 }
             });
 
