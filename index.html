@@ -5681,6 +5681,7 @@
         let _historyLetters = [];  // historia pism - musi być na górze aby uniknąć "before initialization"
         let _historyEditingId = null;
         let _dismissedAutoSenderKeys = new Set();
+        let _dismissedAutoRecipientKeys = new Set();
         var isKomorniczeSelected = false; // checkbox komornicze - var bo używane z onclick HTML
 
         // File upload functionality
@@ -5805,6 +5806,7 @@
                     await loadSenders();
                     await loadRecipients();
                     await autoResolveSenderFromAI();
+                    await autoResolveRecipientFromAI();
                     showToast('Pismo przetworzone pomyślnie!', 'success');
                 } else {
                     hideLoadingOverlay();
@@ -5885,6 +5887,7 @@
                         await loadSenders();
                         await loadRecipients();
                         await autoResolveSenderFromAI();
+                        await autoResolveRecipientFromAI();
                         showToast('Pismo przetworzone pomyślnie!', 'success');
 
                     } else if (data.status === 'FAILURE') {
@@ -5922,6 +5925,7 @@
 
             // Dla nowego pliku przywracamy auto-sugestie dodania nadawcy.
             _dismissedAutoSenderKeys.clear();
+            _dismissedAutoRecipientKeys.clear();
 
             // Checkbox komornicze nadpisuje tryb — użytkownik decyduje o ścieżce
             if (isKomorniczeSelected) {
@@ -6014,7 +6018,7 @@
         if (prevDebtor2) prevDebtor2.parentElement && (prevDebtor2.parentElement.style.display = 'none');
         if (aiLines2) {
             aiLines2.innerHTML = (fields || []).slice(0, 4).map(f =>
-                `<span class="step2-ai-highlight-lbl">${(f.label || '').toUpperCase()}</span>` +
+                `<span class="step2-ai-highlight-lbl">${normalizeUniversalFieldLabelForResponse(f.label || '').toUpperCase()}</span>` +
                 `<span class="step2-ai-highlight-val">${f.value || '—'}</span>`
             ).join('');
         }
@@ -6028,11 +6032,12 @@
         fieldsContainer.innerHTML = '';
 
         (fields || []).forEach(field => {
+            const displayLabel = normalizeUniversalFieldLabelForResponse(field.label || '');
             const div = document.createElement('div');
             div.className = 'form-group';
             div.innerHTML = `
                 <label for="ufield_${field.id}">
-                    ${field.label}
+                    ${displayLabel}
                     ${field.required ? '<span style="color:#e53e3e">*</span>' : ''}
                     <small style="color:#888; font-weight:normal;">(${field.type})</small>
                 </label>
@@ -6053,6 +6058,30 @@ function copyFieldValue(inputId) {
     const val = document.getElementById(inputId).value;
     if (val) navigator.clipboard.writeText(val).catch(() => {});
 }
+
+        function normalizeUniversalFieldLabelForResponse(label) {
+            let out = String(label || '').trim();
+            if (!out) return '';
+
+            out = out
+                .replace(/ADRES\s+NADAWCY/g, 'ADRES ODBIORCY')
+                .replace(/KOD\s+POCZTOWY\s+NADAWCY/g, 'KOD POCZTOWY ODBIORCY')
+                .replace(/MIASTO\s+NADAWCY/g, 'MIASTO ODBIORCY')
+                .replace(/NADAWCY/g, 'ODBIORCY')
+                .replace(/NADAWCA/g, 'ODBIORCA')
+                .replace(/Adres\s+nadawcy/g, 'Adres odbiorcy')
+                .replace(/Kod\s+pocztowy\s+nadawcy/g, 'Kod pocztowy odbiorcy')
+                .replace(/Miasto\s+nadawcy/g, 'Miasto odbiorcy')
+                .replace(/Nadawcy/g, 'Odbiorcy')
+                .replace(/Nadawca/g, 'Odbiorca')
+                .replace(/adres\s+nadawcy/g, 'adres odbiorcy')
+                .replace(/kod\s+pocztowy\s+nadawcy/g, 'kod pocztowy odbiorcy')
+                .replace(/miasto\s+nadawcy/g, 'miasto odbiorcy')
+                .replace(/nadawcy/g, 'odbiorcy')
+                .replace(/nadawca/g, 'odbiorca');
+
+            return out;
+        }
 
         // ── Wprowadzanie głosowe do pola instrukcji ──
         let voiceRecognition = null;
@@ -7751,11 +7780,14 @@ function copyFieldValue(inputId) {
 
         function getUniversalRecipientName(fields, classification) {
             const entities = (classification && classification.detected_entities) || {};
-            const fromEntities = String(entities.nadawca || entities.wystawca || '').trim();
-            if (fromEntities) return fromEntities;
-
             const fromLabels = getFieldValueByLabel(fields, /nadawca|wystawca|instytucja nadawcy|nazwa nadawcy|od kogo/);
             if (fromLabels) return fromLabels;
+
+            const fromEntities = String(entities.nadawca || entities.wystawca || '').trim();
+            const buyerEntity = String(entities.nabywca || entities.buyer_name || '').trim();
+            if (fromEntities && normalizeSenderText(fromEntities) !== normalizeSenderText(buyerEntity)) {
+                return fromEntities;
+            }
 
             return String((classification && classification.subtype) || '').trim();
         }
@@ -9157,6 +9189,279 @@ function copyFieldValue(inputId) {
             return (senders || []).filter(s => normalizeSenderText(s.nazwa) === target);
         }
 
+        function showAutoEntityConfirmModal(options = {}) {
+            const title = String(options.title || 'Potwierdzenie').trim();
+            const message = String(options.message || '').trim();
+            const confirmText = String(options.confirmText || 'Dodaj').trim();
+            const cancelText = String(options.cancelText || 'Pomiń').trim();
+
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `
+                    position: fixed;
+                    inset: 0;
+                    background: rgba(0, 0, 0, 0.55);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 20000;
+                    padding: 16px;
+                `;
+
+                const card = document.createElement('div');
+                card.style.cssText = `
+                    width: min(560px, 96vw);
+                    border-radius: 14px;
+                    background: var(--panel, #ffffff);
+                    color: var(--text, #1f2937);
+                    border: 1px solid var(--line, #e5e7eb);
+                    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.25);
+                    padding: 18px;
+                `;
+
+                const safeTitle = escapeHtml(title);
+                const safeMessage = escapeHtml(message).replace(/\n/g, '<br>');
+
+                card.innerHTML = `
+                    <div style="font-size:16px;font-weight:700;margin-bottom:10px;">${safeTitle}</div>
+                    <div style="font-size:14px;line-height:1.5;color:var(--text2,#4b5563);margin-bottom:16px;">${safeMessage}</div>
+                    <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
+                        <button type="button" id="autoEntityCancelBtn" style="
+                            border:1px solid var(--line,#d1d5db);
+                            background: transparent;
+                            color: var(--text,#111827);
+                            border-radius: 10px;
+                            padding: 9px 14px;
+                            cursor: pointer;
+                            font-weight: 600;
+                        ">${escapeHtml(cancelText)}</button>
+                        <button type="button" id="autoEntityConfirmBtn" style="
+                            border:1px solid #0b6bcb;
+                            background: #0b6bcb;
+                            color: #fff;
+                            border-radius: 10px;
+                            padding: 9px 14px;
+                            cursor: pointer;
+                            font-weight: 700;
+                        ">${escapeHtml(confirmText)}</button>
+                    </div>
+                `;
+
+                const cleanup = (result) => {
+                    if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                    resolve(Boolean(result));
+                };
+
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) cleanup(false);
+                });
+
+                card.querySelector('#autoEntityCancelBtn').addEventListener('click', () => cleanup(false));
+                card.querySelector('#autoEntityConfirmBtn').addEventListener('click', () => cleanup(true));
+
+                overlay.appendChild(card);
+                document.body.appendChild(overlay);
+                card.querySelector('#autoEntityConfirmBtn').focus();
+            });
+        }
+
+        function extractRecipientCandidateFromAI() {
+            const ocr = window.currentOcrResult || {};
+            if (ocr.mode === 'komornicze') return null;
+
+            const classification = ocr.classification || {};
+            const fields = ocr.fields || [];
+            const entities = classification.detected_entities || {};
+
+            const recipientLabelRegex = /adresat|odbiorca|do kogo|recipient|addressee|nabywc|buyer/;
+            const senderLabelRegex = /nadawc|wystawc|od kogo|sender|issuer|sprzedawc|wierzyciel|kontrahent/;
+
+            let nazwa = getEntityValue(entities, [
+                'nadawca', 'wystawca', 'sender_name', 'issuer_name', 'sprzedawca', 'wierzyciel'
+            ]) || getFieldValueByLabelFiltered(fields, senderLabelRegex, recipientLabelRegex);
+
+            let adres = getEntityValue(entities, [
+                'nadawca_adres', 'wystawca_adres', 'sender_address', 'issuer_address', 'sprzedawca_adres'
+            ]) || getFieldValueByLabelFiltered(
+                fields,
+                /nadawc.*adres|wystawc.*adres|adres nadawcy|adres wystawcy|sprzedawc.*adres|wierzyciel.*adres|od kogo.*adres/,
+                recipientLabelRegex
+            );
+
+            let miasto = getEntityValue(entities, [
+                'nadawca_miasto', 'wystawca_miasto', 'sender_city', 'issuer_city', 'sprzedawca_miasto'
+            ]) || getFieldValueByLabelFiltered(
+                fields,
+                /nadawc.*miasto|wystawc.*miasto|miasto nadawcy|miasto wystawcy|sprzedawc.*miasto|wierzyciel.*miasto/,
+                recipientLabelRegex
+            );
+
+            let kod_pocztowy = getEntityValue(entities, [
+                'nadawca_kod_pocztowy', 'wystawca_kod_pocztowy', 'sender_postal_code', 'issuer_postal_code', 'sprzedawca_kod_pocztowy'
+            ]) || getFieldValueByLabelFiltered(
+                fields,
+                /nadawc.*kod pocztowy|wystawc.*kod pocztowy|kod pocztowy nadawcy|kod pocztowy wystawcy|sprzedawc.*kod pocztowy|wierzyciel.*kod pocztowy/,
+                recipientLabelRegex
+            );
+
+            const telefon = getEntityValue(entities, [
+                'nadawca_telefon', 'wystawca_telefon', 'sender_phone', 'issuer_phone'
+            ]) || getFieldValueByLabelFiltered(
+                fields,
+                /nadawc.*telefon|wystawc.*telefon|telefon nadawcy|telefon wystawcy|sprzedawc.*telefon|wierzyciel.*telefon/,
+                recipientLabelRegex
+            );
+
+            const email = getEntityValue(entities, [
+                'nadawca_email', 'wystawca_email', 'sender_email', 'issuer_email'
+            ]) || getFieldValueByLabelFiltered(
+                fields,
+                /nadawc.*email|wystawc.*email|email nadawcy|email wystawcy|e-mail nadawcy|e-mail wystawcy|sprzedawc.*email|wierzyciel.*email/,
+                recipientLabelRegex
+            );
+
+            nazwa = String(nazwa || '').replace(/^pani\s+|^pan\s+/i, '').trim();
+            adres = String(adres || '').trim();
+            miasto = String(miasto || '').trim();
+            kod_pocztowy = String(kod_pocztowy || '').trim();
+
+            if (nazwa.length < 3) return null;
+
+            return {
+                nazwa,
+                adres,
+                miasto,
+                kod_pocztowy,
+                telefon: String(telefon || '').trim(),
+                email: String(email || '').trim(),
+                kategoria: detectSenderCategoryFromClassification(classification)
+            };
+        }
+
+        function findRecipientsByExactName(candidateName, recipients) {
+            const target = normalizeSenderText(candidateName);
+            if (!target) return [];
+            return (recipients || []).filter(r => normalizeSenderText(r.nazwa) === target);
+        }
+
+        function findExistingRecipientMatch(candidate, recipients) {
+            const target = normalizeSenderText(candidate.nazwa);
+            if (!target) return null;
+            let best = null;
+
+            for (const r of (recipients || [])) {
+                const name = normalizeSenderText(r.nazwa);
+                if (!name) continue;
+
+                if (name === target) return r;
+
+                const overlap = target.length >= 6 && (name.includes(target) || target.includes(name));
+                if (overlap && !best) best = r;
+            }
+            return best;
+        }
+
+        async function autoResolveRecipientFromAI() {
+            const candidate = extractRecipientCandidateFromAI();
+            if (!candidate) return;
+
+            let recipients = _recipientsCache || [];
+            if (!recipients.length) {
+                recipients = await loadRecipients();
+            }
+
+            const sameNameRecipients = findRecipientsByExactName(candidate.nazwa, recipients);
+            const candidateHasAddress = !!(String(candidate.adres || '').trim() || String(candidate.kod_pocztowy || '').trim() || String(candidate.miasto || '').trim());
+
+            if (sameNameRecipients.length > 0) {
+                const sameAddressRecipient = candidateHasAddress
+                    ? sameNameRecipients.find(r => isSameAddress(candidate, r))
+                    : sameNameRecipients.find(r => !String(senderAddressDisplay(r)).trim() || senderAddressDisplay(r) === '(brak adresu)');
+
+                if (sameAddressRecipient) {
+                    selectRecipientOption(sameAddressRecipient.id);
+                    showToast(`Automatycznie wybrano istniejącego odbiorcę: ${sameAddressRecipient.nazwa}`, 'info');
+                    return;
+                }
+
+                const existingAddress = senderAddressDisplay(sameNameRecipients[0]);
+                const candidateAddress = senderAddressDisplay(candidate);
+                const candidateKey = normalizeSenderText(candidate.nazwa);
+
+                const conflictMsg = candidateHasAddress
+                    ? `Znaleziono odbiorcę, który już istnieje: "${candidate.nazwa}".\n\n` +
+                      `Adres w bazie: ${existingAddress}\n` +
+                      `Adres odczytany z pisma: ${candidateAddress}\n\n` +
+                      `Czy dodać odbiorcę z kolejnym adresem?`
+                    : `Znaleziono odbiorcę, który już istnieje: "${candidate.nazwa}".\n\n` +
+                      `W piśmie nie odczytano adresu (brak adresu).\n` +
+                      `Adres w bazie: ${existingAddress}\n\n` +
+                      `Czy dodać odbiorcę bez adresu?`;
+
+                const shouldAddConflict = await showAutoEntityConfirmModal({
+                    title: 'Dodać odbiorcę do bazy?',
+                    message: conflictMsg,
+                    confirmText: 'Dodaj odbiorcę',
+                    cancelText: 'Pomiń'
+                });
+                if (!shouldAddConflict) {
+                    if (candidateKey) _dismissedAutoRecipientKeys.add(candidateKey);
+                    return;
+                }
+            }
+
+            const existing = findExistingRecipientMatch(candidate, recipients);
+            if (existing && sameNameRecipients.length === 0) {
+                selectRecipientOption(existing.id);
+                showToast(`Automatycznie wybrano odbiorcę odpowiedzi na podstawie nadawcy pisma: ${existing.nazwa}`, 'info');
+                return;
+            }
+
+            const candidateKey = normalizeSenderText(candidate.nazwa);
+            if (!candidateKey || _dismissedAutoRecipientKeys.has(candidateKey)) return;
+
+            const shouldAdd = await showAutoEntityConfirmModal({
+                title: 'Dodać odbiorcę do bazy?',
+                message: candidateHasAddress
+                    ? `Rozpoznano nadawcę pisma: "${candidate.nazwa}".\n` +
+                      `Odczytany adres: ${senderAddressDisplay(candidate)}\n\n` +
+                      `Nie ma go na Twojej liście odbiorców odpowiedzi. Czy dodać automatycznie?`
+                    : `Rozpoznano nadawcę pisma: "${candidate.nazwa}".\n` +
+                      `W piśmie nie odczytano adresu.\n\n` +
+                      `Czy dodać odbiorcę bez adresu?`,
+                confirmText: 'Dodaj odbiorcę',
+                cancelText: 'Pomiń'
+            });
+
+            if (!shouldAdd) {
+                _dismissedAutoRecipientKeys.add(candidateKey);
+                return;
+            }
+
+            try {
+                const resp = await fetch('/api/recipients', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(candidate)
+                });
+                const result = await resp.json();
+
+                if (!resp.ok) {
+                    showToast('Nie udało się dodać odbiorcy automatycznie.', 'error');
+                    return;
+                }
+
+                await loadRecipients();
+                if (result && result.id) {
+                    selectRecipientOption(result.id);
+                    showToast(`Dodano i wybrano odbiorcę odpowiedzi: ${result.nazwa}`, 'success');
+                }
+            } catch (e) {
+                console.error('Błąd auto-dodawania odbiorcy:', e);
+                showToast('Błąd połączenia przy auto-dodawaniu odbiorcy.', 'error');
+            }
+        }
+
         async function autoResolveSenderFromAI() {
             const candidate = extractSenderCandidateFromAI();
             if (!candidate) return;
@@ -9194,7 +9499,12 @@ function copyFieldValue(inputId) {
                       `Adres w bazie: ${existingAddress}\n\n` +
                       `Czy dodać nadawcę bez adresu?`;
 
-                const shouldAddConflict = confirm(conflictMsg);
+                                const shouldAddConflict = await showAutoEntityConfirmModal({
+                                        title: 'Dodać nadawcę do bazy?',
+                                        message: conflictMsg,
+                                        confirmText: 'Dodaj nadawcę',
+                                        cancelText: 'Pomiń'
+                                });
                 if (!shouldAddConflict) {
                     if (candidateKey) _dismissedAutoSenderKeys.add(candidateKey);
                     return;
@@ -9211,14 +9521,18 @@ function copyFieldValue(inputId) {
             const candidateKey = normalizeSenderText(candidate.nazwa);
             if (!candidateKey || _dismissedAutoSenderKeys.has(candidateKey)) return;
 
-            const shouldAdd = confirm(candidateHasAddress
-                ? `Rozpoznano adresata pisma: "${candidate.nazwa}".\n` +
-                  `Odczytany adres: ${senderAddressDisplay(candidate)}\n\n` +
-                  `Nie ma go na Twojej liście nadawców odpowiedzi. Czy dodać automatycznie?`
-                : `Rozpoznano adresata pisma: "${candidate.nazwa}".\n` +
-                  `W piśmie nie odczytano adresu.\n\n` +
-                  `Czy dodać nadawcę bez adresu?`
-            );
+                        const shouldAdd = await showAutoEntityConfirmModal({
+                                title: 'Dodać nadawcę do bazy?',
+                                message: candidateHasAddress
+                                        ? `Rozpoznano adresata pisma: "${candidate.nazwa}".\n` +
+                                            `Odczytany adres: ${senderAddressDisplay(candidate)}\n\n` +
+                                            `Nie ma go na Twojej liście nadawców odpowiedzi. Czy dodać automatycznie?`
+                                        : `Rozpoznano adresata pisma: "${candidate.nazwa}".\n` +
+                                            `W piśmie nie odczytano adresu.\n\n` +
+                                            `Czy dodać nadawcę bez adresu?`,
+                                confirmText: 'Dodaj nadawcę',
+                                cancelText: 'Pomiń'
+                        });
 
             if (!shouldAdd) {
                 _dismissedAutoSenderKeys.add(candidateKey);
@@ -10100,9 +10414,13 @@ function copyFieldValue(inputId) {
 
         async function deleteRecipient(id) {
             if (!confirm('Usunąć tego odbiorcę?')) return;
+            const recipientToDelete = (_recipientsCache || []).find(r => r.id === id);
             try {
                 const resp = await fetch(`/api/recipients/${id}`, { method: 'DELETE' });
                 if (resp.ok) {
+                    if (recipientToDelete && recipientToDelete.nazwa) {
+                        _dismissedAutoRecipientKeys.delete(normalizeSenderText(recipientToDelete.nazwa));
+                    }
                     if (currentRecipient && currentRecipient.id === id) {
                         currentRecipient = null;
                         selectRecipientOption(null);
