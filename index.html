@@ -3584,6 +3584,65 @@
             transition: background .15s;
         }
         .upload-browse-btn:hover { background: rgba(184,196,255,.18); }
+        .step1-entry-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 10px;
+        }
+        .step1-entry-card {
+            background: #141b2b;
+            border: 1px solid rgba(184,196,255,.12);
+            border-radius: 16px;
+            padding: 18px;
+        }
+        .step1-manual-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            min-height: 238px;
+        }
+        .step1-manual-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 14px;
+            background: rgba(184,196,255,.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-bottom: 12px;
+        }
+        .step1-manual-title {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 700;
+            color: #dce2f7;
+        }
+        .step1-manual-sub {
+            margin: 8px 0 14px;
+            font-size: 12px;
+            color: #8e909f;
+            max-width: 320px;
+            line-height: 1.45;
+        }
+        .step1-manual-btn {
+            border: 1px solid rgba(184,196,255,.28);
+            background: rgba(184,196,255,.12);
+            color: #dce2f7;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .step1-manual-btn:hover { background: rgba(184,196,255,.2); }
+        @media (max-width: 900px) {
+            .step1-entry-grid { grid-template-columns: 1fr; }
+            .step1-manual-card { min-height: 190px; }
+        }
 
         /* ── Komornicze toggle card (step 1) ── */
         .komornicze-toggle-card {
@@ -4852,20 +4911,28 @@
                     <div class="step-hero-sub">Załaduj skan pisma urzędowego lub prywatnego — AI automatycznie rozpozna dane i zaproponuje odpowiedź.</div>
                 </div>
 
-                <div class="form-group">
-                    <div class="file-upload" id="fileUpload" style="padding:36px 24px; text-align:center;">
-                        <input type="file" id="fileInput" accept=".PDF,.jpg,.jpeg,.png" style="display: none;">
-                        <div class="upload-icon-wrap">📄</div>
-                        <h3 style="margin:0 0 6px; font-size:14px; font-weight:600; color:#dce2f7;">Przeciągnij plik tutaj lub kliknij aby wybrać</h3>
-                        <p style="margin:0; font-size:12px; color:#8e909f;">Obsługiwane formaty: PDF, JPG, PNG (max 10&nbsp;MB)</p>
-                        <button class="upload-browse-btn" type="button" onclick="document.getElementById('fileInput').click()">
-                            📂 Wybierz plik
-                        </button>
+                <div class="step1-entry-grid">
+                    <div class="step1-entry-card">
+                        <div class="file-upload" id="fileUpload" style="padding:36px 24px; text-align:center;">
+                            <input type="file" id="fileInput" accept=".PDF,.jpg,.jpeg,.png" style="display: none;">
+                            <div class="upload-icon-wrap">📄</div>
+                            <h3 style="margin:0 0 6px; font-size:14px; font-weight:600; color:#dce2f7;">Przeciągnij plik tutaj lub kliknij aby wybrać</h3>
+                            <p style="margin:0; font-size:12px; color:#8e909f;">Obsługiwane formaty: PDF, JPG, PNG (max 10&nbsp;MB)</p>
+                            <button class="upload-browse-btn" type="button" onclick="document.getElementById('fileInput').click()">
+                                📂 Wybierz plik
+                            </button>
+                        </div>
+                        <div id="fileName" style="margin-top:10px; font-weight:600;"></div>
+                        <button class="btn" onclick="processFile()" style="margin-top:10px;">Przetwórz Pismo ▶</button>
                     </div>
-                    <div id="fileName" style="margin-top:10px; font-weight:600;"></div>
-                </div>
 
-                <button class="btn" onclick="processFile()" style="margin-top:8px;">Przetwórz Pismo ▶</button>
+                    <div class="step1-entry-card step1-manual-card">
+                        <div class="step1-manual-icon">✍️</div>
+                        <h3 class="step1-manual-title">Generuj Bez Wgranego Pisma</h3>
+                        <p class="step1-manual-sub">Przejdź od razu do kroku 2 i wpisz dane ręcznie. Następnie wygeneruj pismo bez dokumentu wejściowego.</p>
+                        <button class="step1-manual-btn" type="button" onclick="startManualWithoutInput()">Generuj pismo bez danych wejściowych</button>
+                    </div>
+                </div>
 
                 <!-- Komornicze toggle card -->
                 <div class="komornicze-toggle-card" id="komorniczCardLabel" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleKomorniczeMode()" onkeydown="handleKomorniczeToggleKey(event)">
@@ -5486,6 +5553,36 @@
                 document.querySelector('.btn').disabled = false;
                 showToast('Nie udało się połączyć z serwerem.', 'error');
             }
+        }
+
+        async function startManualWithoutInput() {
+            fileData = null;
+            const fileInputEl = document.getElementById('fileInput');
+            if (fileInputEl) fileInputEl.value = '';
+            const fileNameEl = document.getElementById('fileName');
+            if (fileNameEl) fileNameEl.textContent = '✍️ Tryb ręczny: bez wgranego pliku';
+
+            const emptyData = {
+                komornik: { imieNazwisko: '', adres: '', miasto: '', telefon: '', email: '', plec: 'M' },
+                dluznik: { imieNazwisko: '', pesel: '' },
+                sprawa: { sygnaturaSprawy: '', numerRachunku: '' }
+            };
+
+            const manualClassification = isKomorniczeSelected
+                ? { is_komornicze: true, category: 'INSTYTUCJA_PUBLICZNA', subtype: 'komornik', confidence: 0 }
+                : { is_komornicze: false, category: 'INNE', subtype: 'pismo ręczne', confidence: 0 };
+
+            populateOCRResults(
+                emptyData,
+                isKomorniczeSelected ? 'komornicze' : 'universal',
+                manualClassification,
+                [],
+                'Tryb ręczny: dane wprowadzone bez OCR'
+            );
+
+            goToStep(2);
+            await loadSenders();
+            showToast('Przejście do kroku 2 w trybie ręcznym.', 'info');
         }
 
         function pollTaskStatus(taskId) {
