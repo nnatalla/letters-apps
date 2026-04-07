@@ -2335,6 +2335,12 @@
         .letter-preview .wrapper h4 {
             color: #000000 !important;
         }
+        .letter-preview .sender,
+        .letter-preview .sender *,
+        .letter-preview .recipient,
+        .letter-preview .recipient * {
+            color: #000000 !important;
+        }
 
         /* Also fix preview-modal-body which may contain a4-frame */
         .preview-modal-body .a4-frame *,
@@ -7187,17 +7193,19 @@ function copyFieldValue(inputId) {
             generateBtn.textContent = 'Generuję...';
             generateBtn.disabled = true;
 
+            const senderPayload = currentSender ? {
+                nazwa: (currentSender.nazwa || '').trim(),
+                adres: (currentSender.adres || currentSender.ulica || '').trim(),
+                kod_pocztowy: (currentSender.kod_pocztowy || currentSender.kod || '').trim(),
+                miasto: (currentSender.miasto || '').trim(),
+                telefon: (currentSender.telefon || '').trim(),
+                email: (currentSender.email || '').trim()
+            } : null;
+
             const payload = {
                 option: selectedOption,
-                company: currentSender ? currentSender.nazwa : '',
-                sender: currentSender ? {
-                    nazwa: currentSender.nazwa,
-                    adres: currentSender.adres,
-                    kod_pocztowy: currentSender.kod_pocztowy,
-                    miasto: currentSender.miasto,
-                    telefon: currentSender.telefon,
-                    email: currentSender.email
-                } : null,
+                company: senderPayload ? senderPayload.nazwa : '',
+                sender: senderPayload,
                 dane: {
                     komornik: {
                         imieNazwisko: document.getElementById('editBailiffName').value,
@@ -7239,8 +7247,8 @@ function copyFieldValue(inputId) {
                             category: window.currentClassification.category,
                             subtype: window.currentClassification.subtype,
                             fields: updatedFields,
-                            company: currentSender ? currentSender.nazwa : '',
-                            sender: currentSender || null,
+                            company: senderPayload ? senderPayload.nazwa : '',
+                            sender: senderPayload,
                             recipient_name: universalRecipientName,
                             scenario: document.getElementById('universal-scenario')?.value || null,
                             user_instructions: (document.getElementById('userInstructions')?.value || '').trim()
@@ -9324,7 +9332,7 @@ function copyFieldValue(inputId) {
                     </div>
                     <div class="history-card-actions">
                         ${_historyEditingId === l.id
-                            ? `<button class="btn-hist btn-hist-edit" onclick="saveHistoryTitleInline(${l.id})">✓ OK</button><button class="btn-hist" onclick="cancelHistoryTitleEdit()">✕ X</button>`
+                            ? `<button class="btn-hist btn-hist-edit" onclick="saveHistoryTitleInline(${l.id})">✓</button><button class="btn-hist" onclick="cancelHistoryTitleEdit()">✕</button>`
                             : `<button class="btn-hist btn-hist-edit" onclick="editHistoryTitle(${l.id})">✏️ Nazwa</button>`}
                         <button class="btn-hist btn-hist-preview" onclick="previewLetter(${l.id})">👁️ Podgląd</button>
                         <button class="btn-hist btn-hist-doc" onclick="downloadFromHistory(${l.id}, 'doc')">📄 DOC</button>
